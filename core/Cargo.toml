@@ -11,15 +11,8 @@ version.workspace = true
 
 [dependencies]
 
-[build-dependencies]
+[dev-dependencies]
 anyhow = { workspace = true }
 indexmap = { version = "2", features = ["serde"] }
-prettyplease = "0.2"
-proc-macro2 = "1"
-quote = "1"
 serde = { workspace = true }
 serde_json = { version = "1", features = ["preserve_order"] }
-syn = { version = "2", default-features = false, features = [
-    "full",
-    "parsing",
-] }
