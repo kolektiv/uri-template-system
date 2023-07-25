@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "tests"]
+members = ["core"]
 
 [workspace.dependencies]
 anyhow = "1"

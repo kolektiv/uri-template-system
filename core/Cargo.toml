@@ -14,5 +14,6 @@ version.workspace = true
 [build-dependencies]
 anyhow = { workspace = true }
 indexmap = { version = "2", features = ["serde"] }
+quote = "1"
 serde = { workspace = true }
 serde_json = { version = "1", features = ["preserve_order"] }
