@@ -20,11 +20,11 @@ use serde::Deserialize;
 
 #[test]
 fn process() -> Result<()> {
-    for (name, set) in read_files("tests/cases/process")? {
-        for (tpl, exp) in &set.cases {
+    for (name, cases) in read_files("tests/cases/process")? {
+        for (tpl, exp) in &cases.cases {
             match exp {
-                Expansion::List(exps) => list(&name, tpl, exps, &set.variables),
-                Expansion::String(exp) => string(&name, tpl, exp, &set.variables),
+                Expansion::List(exps) => list(&name, tpl, exps, &cases.variables),
+                Expansion::String(exp) => string(&name, tpl, exp, &cases.variables),
             }
         }
     }
