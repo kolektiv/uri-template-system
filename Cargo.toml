@@ -1,0 +1,23 @@
+[workspace]
+members = ["core", "tests"]
+
+[workspace.dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+
+[workspace.package]
+authors = ["Andrew Cherry (kolektiv)"]
+categories = [
+  "data-structures",
+  "network-programming",
+  "parser-implementations",
+  "template-engine",
+  "web-programming",
+]
+documentation = "https://docs.rs/uri-template-system"
+edition = "2021"
+homepage = "https://github.com/kolektiv/uri-template-system"
+license = "AGPL-3.0-only"
+readme = "README.md"
+version = "0.1.0"
