@@ -10,9 +10,11 @@ readme.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+nom = { workspace = true }
+nom-supreme = { workspace = true }
 
 [dev-dependencies]
-anyhow = { workspace = true }
 indexmap = { version = "2", features = ["serde"] }
 serde = { workspace = true }
 serde_json = { version = "1", features = ["preserve_order"] }
