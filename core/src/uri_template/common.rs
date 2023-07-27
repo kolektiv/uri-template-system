@@ -19,3 +19,10 @@ pub fn percent_encoded(input: &str) -> IResult<&str, &str> {
         .recognize()
         .parse(input)
 }
+
+// -----------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {}
