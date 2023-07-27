@@ -1,7 +1,5 @@
 mod parse;
 
-use nom::IResult;
-
 // =============================================================================
 // Expression
 // =============================================================================
@@ -12,48 +10,42 @@ use nom::IResult;
 pub struct Expression(Vec<VarSpec>, Option<Operator>);
 
 impl Expression {
-    pub fn new(variable_list: Vec<VarSpec>, operator: Option<Operator>) -> Self {
+    fn new(variable_list: Vec<VarSpec>, operator: Option<Operator>) -> Self {
         Self(variable_list, operator)
-    }
-
-    pub fn parse(input: &str) -> IResult<&str, Self> {
-        parse::expression(input)
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct VarSpec(String, Option<Modifier>);
+struct VarSpec(String, Option<Modifier>);
 
 impl VarSpec {
-    pub fn new<S>(varname: S, modifier: Option<Modifier>) -> Self
-    where
-        S: Into<String>,
-    {
+    #[allow(dead_code)]
+    pub fn new(varname: impl Into<String>, modifier: Option<Modifier>) -> Self {
         Self(varname.into(), modifier)
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Modifier {
+enum Modifier {
     Prefix(usize),
     Explode,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Operator {
+enum Operator {
     Level2(OpLevel2),
     Level3(OpLevel3),
     Reserve(OpReserve),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OpLevel2 {
+enum OpLevel2 {
     Plus,
     Hash,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OpLevel3 {
+enum OpLevel3 {
     Period,
     Slash,
     Semicolon,
@@ -62,10 +54,16 @@ pub enum OpLevel3 {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OpReserve {
+enum OpReserve {
     Equals,
     Comma,
     Exclamation,
     At,
     Pipe,
 }
+
+// -----------------------------------------------------------------------------
+
+// Re-Export
+
+pub use self::parse::expression as parse;

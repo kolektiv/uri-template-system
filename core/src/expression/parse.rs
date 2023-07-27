@@ -5,13 +5,12 @@ use nom::{
     character::complete as character,
     multi,
     sequence,
-    AsChar,
     IResult,
     Parser,
 };
 use nom_supreme::ParserExt;
 
-use crate::uri_template::{
+use crate::{
     common,
     expression::{
         Expression,
@@ -79,19 +78,16 @@ fn modifier(input: &str) -> IResult<&str, Modifier> {
 }
 
 fn prefix(input: &str) -> IResult<&str, Modifier> {
-    character::satisfy(|c| c >= '\x31' && c <= '\x39')
-        .and::<_, &str>(bytes::take_while_m_n(0, 3, AsChar::is_dec_digit))
+    character::satisfy(is_non_zero_digit)
+        .and::<_, &str>(bytes::take_while_m_n(0, 3, is_digit))
         .map(|(digit, digits)| {
             let mut src = String::with_capacity(digits.len() + 1);
             src.push(digit);
             src.push_str(digits);
-
-            u16::from_str_radix(&src, 10)
-                .expect("max length parse error")
-                .into()
+            src.parse::<u16>().unwrap().into()
         })
         .preceded_by(character::char(':'))
-        .map(|max_length| Modifier::Prefix(max_length))
+        .map(Modifier::Prefix)
         .parse(input)
 }
 
@@ -103,8 +99,32 @@ fn explode(input: &str) -> IResult<&str, Modifier> {
 
 // Predicates
 
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_digit(c: char) -> bool {
+    match c {
+        _ if c.is_ascii_digit() => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_non_zero_digit(c: char) -> bool {
+    match c {
+        | '\x31'..='\x39' => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
 fn is_varchar(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '_'
+    match c {
+        | '\x5f' => true,
+        _ if c.is_ascii_alphanumeric() => true,
+        _ => false,
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -118,11 +138,7 @@ mod tests {
     #[test]
     fn parse_expression() {
         [
-            (
-                "{valid}",
-                "",
-                Expression::new(vec![VarSpec::new("valid", None)], None),
-            ),
+            ("{valid}", "", vec![("valid", None)], None),
             // ("valid.valid", "", VarSpec::new("valid.valid", None)),
             // ("valid invalid", " invalid", VarSpec::new("valid", None)),
             // ("v_29.m-invalid", "-invalid", VarSpec::new("v_29.m", None)),
@@ -131,8 +147,21 @@ mod tests {
         ]
         .into_iter()
         .enumerate()
-        .for_each(|(i, (input, rest, ok))| {
-            assert_eq!(expression(input), Ok((rest, ok)), "Test Case {i}")
+        .for_each(|(i, (input, rest, varspecs, operator))| {
+            assert_eq!(
+                expression(input),
+                Ok((
+                    rest,
+                    Expression::new(
+                        varspecs
+                            .into_iter()
+                            .map(|(name, modifier)| VarSpec::new(name, modifier))
+                            .collect(),
+                        operator
+                    )
+                )),
+                "Test Case {i}"
+            )
         });
     }
 }

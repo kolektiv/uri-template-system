@@ -1,7 +1,5 @@
 mod parse;
 
-use nom::IResult;
-
 // =================================================s============================
 // Literal
 // =============================================================================
@@ -12,14 +10,14 @@ use nom::IResult;
 pub struct Literal(String);
 
 impl Literal {
-    pub fn new<S>(literal: S) -> Self
-    where
-        S: Into<String>,
-    {
+    #[allow(dead_code)]
+    fn new(literal: impl Into<String>) -> Self {
         Self(literal.into())
     }
-
-    pub fn parse(input: &str) -> IResult<&str, Self> {
-        parse::literal(input)
-    }
 }
+
+// -----------------------------------------------------------------------------
+
+// Re-Export
+
+pub use self::parse::literal as parse;
