@@ -19,7 +19,7 @@ use serde::Deserialize;
 // included as a submodule in this repository (./cases/process).
 
 #[test]
-fn process() -> Result<()> {
+fn process_test_cases() -> Result<()> {
     for (name, cases) in read_files("tests/cases/process")? {
         for (tpl, exp) in &cases.cases {
             match exp {
