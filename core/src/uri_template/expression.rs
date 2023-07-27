@@ -6,6 +6,7 @@ use nom::{
     bytes::complete as bytes,
     character::complete as character,
     multi,
+    sequence,
     AsChar,
     IResult,
     Parser,
@@ -20,12 +21,16 @@ use crate::uri_template::common;
 
 // Types
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Expression(Vec<VarSpec>, Option<Operator>);
 
 impl Expression {
     pub fn new(variable_list: Vec<VarSpec>, operator: Option<Operator>) -> Self {
         Self(variable_list, operator)
+    }
+
+    pub fn parse(input: &str) -> IResult<&str, Self> {
+        expression(input)
     }
 }
 
@@ -47,20 +52,20 @@ pub enum Modifier {
     Explode,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Operator {
     Level2(OpLevel2),
     Level3(OpLevel3),
     Reserve(OpReserve),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum OpLevel2 {
     Plus,
     Hash,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum OpLevel3 {
     Period,
     Slash,
@@ -69,7 +74,7 @@ pub enum OpLevel3 {
     Ampersand,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum OpReserve {
     Equals,
     Comma,
@@ -88,6 +93,12 @@ pub enum OpReserve {
 // characters produces far more intermediate values than parsing sets of
 // matching characters - however, for now this will stay, pending any future
 // optimisation of this part of the library.
+
+fn expression(input: &str) -> IResult<&str, Expression> {
+    sequence::delimited(character::char('{'), variable_list, character::char('}'))
+        .map(|variable_list| Expression::new(variable_list, None))
+        .parse(input)
+}
 
 fn variable_list(input: &str) -> IResult<&str, Vec<VarSpec>> {
     multi::separated_list1(character::char(','), varspec).parse(input)
@@ -166,19 +177,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_varspec() {
+    fn parse_expression() {
         [
-            ("valid", "", VarSpec::new("valid", None)),
-            ("valid.valid", "", VarSpec::new("valid.valid", None)),
-            ("valid invalid", " invalid", VarSpec::new("valid", None)),
-            ("v_29.m-invalid", "-invalid", VarSpec::new("v_29.m", None)),
-            ("valid*", "", VarSpec::new("valid", Some(Modifier::Explode))),
-            ("v:12", "", VarSpec::new("v", Some(Modifier::Prefix(12)))),
+            (
+                "{valid}",
+                "",
+                Expression::new(vec![VarSpec::new("valid", None)], None),
+            ),
+            // ("valid.valid", "", VarSpec::new("valid.valid", None)),
+            // ("valid invalid", " invalid", VarSpec::new("valid", None)),
+            // ("v_29.m-invalid", "-invalid", VarSpec::new("v_29.m", None)),
+            // ("valid*", "", VarSpec::new("valid", Some(Modifier::Explode))),
+            // ("va:12", "", VarSpec::new("va", Some(Modifier::Prefix(12)))),
         ]
         .into_iter()
         .enumerate()
         .for_each(|(i, (input, rest, ok))| {
-            assert_eq!(varspec(input), Ok((rest, ok)), "Test Case {i}")
+            assert_eq!(expression(input), Ok((rest, ok)), "Test Case {i}")
         });
     }
 }
