@@ -104,8 +104,10 @@ mod tests {
 
     use super::*;
 
+    // Literal
+
     #[test]
-    fn parse_valid() {
+    fn literal_ok() {
         [
             ("valid", "", "valid"),
             ("valid invalid", " invalid", "valid"),
@@ -120,12 +122,12 @@ mod tests {
                 literal(input),
                 Ok((rest, Literal::new(ok))),
                 "Test Case {i}"
-            )
+            );
         });
     }
 
     #[test]
-    fn parse_invalid() {
+    fn literal_err() {
         [
             (" invalid", " invalid", ErrorKind::Char),
             ("|invalid", "|invalid", ErrorKind::Char),
@@ -138,7 +140,7 @@ mod tests {
                 literal(input),
                 Err(Err::Error(Error::new(rest, kind))),
                 "Test Case {i}"
-            )
+            );
         });
     }
 }

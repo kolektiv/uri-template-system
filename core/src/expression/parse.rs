@@ -32,6 +32,13 @@ use crate::{
 // matching characters - however, for now this will stay, pending any future
 // optimisation of this part of the library.
 
+// Also note: parsers are written to meet the specifications individually, and
+// do not provide guarantees about anterior or posterior input state. For
+// example, the prefix modifier will restrict the input to 4 digits in length,
+// but will not guarantee that it is not followed by additional digits - this is
+// assumed to be an issue for a subsequent parser if it does not accept the
+// remaining input.
+
 pub fn expression(input: &str) -> IResult<&str, Expression> {
     sequence::delimited(character::char('{'), variable_list, character::char('}'))
         .map(|variable_list| Expression::new(variable_list, None))
@@ -133,10 +140,59 @@ fn is_varchar(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use nom::{
+        error::{
+            Error,
+            ErrorKind,
+        },
+        Err,
+    };
+
     use super::*;
 
+    // Varchar
+
+    // -------------------------------------------------------------------------
+
+    // Modifier
+
     #[test]
-    fn parse_expression() {
+    fn modifier_ok() {
+        [
+            ("*", "", Modifier::Explode),
+            (":42", "", Modifier::Prefix(42)),
+            (":10000", "0", Modifier::Prefix(1000)),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, result))| {
+            assert_eq!(modifier(input), Ok((rest, result)), "Test Case {i}");
+        });
+    }
+
+    #[test]
+    fn modifier_err() {
+        [
+            (":042", ":042", ErrorKind::Char),
+            (":x42", ":x42", ErrorKind::Char),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, kind))| {
+            assert_eq!(
+                modifier(input),
+                Err(Err::Error(Error::new(rest, kind))),
+                "Test Case {i}"
+            );
+        });
+    }
+
+    // -------------------------------------------------------------------------
+
+    // Expression
+
+    #[test]
+    fn expression_ok() {
         [
             ("{valid}", "", vec![("valid", None)], None),
             // ("valid.valid", "", VarSpec::new("valid.valid", None)),
@@ -161,7 +217,7 @@ mod tests {
                     )
                 )),
                 "Test Case {i}"
-            )
+            );
         });
     }
 }

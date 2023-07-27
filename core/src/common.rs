@@ -37,4 +37,46 @@ fn is_hex_digit(c: char) -> bool {
 // Tests
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use nom::{
+        error::{
+            Error,
+            ErrorKind,
+        },
+        Err,
+    };
+
+    use super::*;
+
+    #[test]
+    fn percent_encoded_ok() {
+        [
+            ("%2b", "", "%2b"),
+            ("%2B", "", "%2B"),
+            ("%2b rest", " rest", "%2b"),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, output))| {
+            assert_eq!(percent_encoded(input), Ok((rest, output)), "Test Case {i}");
+        })
+    }
+
+    #[test]
+    fn percent_encoded_err() {
+        [
+            ("$2b", "$2b", ErrorKind::Char),
+            ("%2g", "2g", ErrorKind::TakeWhileMN),
+            ("%ge", "ge", ErrorKind::TakeWhileMN),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, kind))| {
+            assert_eq!(
+                percent_encoded(input),
+                Err(Err::Error(Error::new(rest, kind))),
+                "Test Case {i}"
+            );
+        })
+    }
+}

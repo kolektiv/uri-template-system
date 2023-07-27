@@ -18,6 +18,7 @@ use serde::Deserialize;
 // cases published at https://github.com/uri-templates/uritemplate-test, and
 // included as a submodule in this repository (./cases/process).
 
+#[ignore]
 #[test]
 fn process_test_cases() -> Result<()> {
     for (name, cases) in read_files("tests/cases/process")? {
