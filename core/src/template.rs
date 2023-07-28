@@ -1,8 +1,12 @@
 mod parse;
 
+use anyhow::Result;
+
 use crate::{
     expression::Expression,
     literal::Literal,
+    value::Values,
+    Expand,
 };
 
 // =============================================================================
@@ -21,10 +25,33 @@ impl Template {
     }
 }
 
+impl Expand for Template {
+    type Context = ();
+
+    fn expand(&self, output: &mut String, values: &Values, context: &Self::Context) -> Result<()> {
+        for component in self.0.iter() {
+            component.expand(output, values, context)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq)]
 enum Component {
     Expression(Expression),
     Literal(Literal),
+}
+
+impl Expand for Component {
+    type Context = ();
+
+    fn expand(&self, output: &mut String, values: &Values, context: &Self::Context) -> Result<()> {
+        match self {
+            Component::Expression(expression) => expression.expand(output, values, context),
+            Component::Literal(literal) => literal.expand(output, values, context),
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------

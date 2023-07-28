@@ -41,7 +41,7 @@ use crate::{
 
 pub fn expression(input: &str) -> IResult<&str, Expression> {
     sequence::delimited(character::char('{'), variable_list, character::char('}'))
-        .map(|variable_list| Expression::new(variable_list, None))
+        .map(|variable_list| Expression::new(variable_list, None)) // TODO: Operator!
         .parse(input)
 }
 
@@ -150,7 +150,82 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn varname_ok() {
+        [
+            ("a", "", "a"),
+            ("a.", ".", "a"),
+            ("3", "", "3"),
+            ("ab", "", "ab"),
+            ("a_b", "", "a_b"),
+            ("%2b", "", "%2b"),
+            ("a_b.c", "", "a_b.c"),
+            ("a%2b.c", "", "a%2b.c"),
+            ("a%2b.c!", "!", "a%2b.c"),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, result))| {
+            assert_eq!(varname(input), Ok((rest, result.into())), "Test Case {i}");
+        });
+    }
+
+    #[test]
+    fn varname_err() {
+        [
+            (".", ".", ErrorKind::Char),
+            (".a", ".a", ErrorKind::Char),
+            ("$2b", "$2b", ErrorKind::Char),
+            ("/", "/", ErrorKind::Char),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, kind))| {
+            assert_eq!(
+                varname(input),
+                Err(Err::Error(Error::new(rest, kind))),
+                "Test Case {i}"
+            );
+        });
+    }
+
+    // -------------------------------------------------------------------------
+
     // Varchar
+
+    #[test]
+    fn varchar_ok() {
+        [
+            ("a", "", "a"),
+            ("3", "", "3"),
+            ("ab", "b", "a"),
+            ("_", "", "_"),
+            ("%2b", "", "%2b"),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, result))| {
+            assert_eq!(varchar(input), Ok((rest, result)), "Test Case {i}");
+        });
+    }
+
+    #[test]
+    fn varchar_err() {
+        [
+            (".", ".", ErrorKind::Char),
+            ("$2b", "$2b", ErrorKind::Char),
+            ("/", "/", ErrorKind::Char),
+        ]
+        .into_iter()
+        .enumerate()
+        .for_each(|(i, (input, rest, kind))| {
+            assert_eq!(
+                varchar(input),
+                Err(Err::Error(Error::new(rest, kind))),
+                "Test Case {i}"
+            );
+        });
+    }
 
     // -------------------------------------------------------------------------
 

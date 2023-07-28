@@ -1,3 +1,4 @@
+mod expand;
 mod parse;
 
 // =============================================================================
@@ -20,8 +21,8 @@ struct VarSpec(String, Option<Modifier>);
 
 impl VarSpec {
     #[allow(dead_code)]
-    pub fn new(varname: impl Into<String>, modifier: Option<Modifier>) -> Self {
-        Self(varname.into(), modifier)
+    pub fn new(var_name: impl Into<String>, modifier: Option<Modifier>) -> Self {
+        Self(var_name.into(), modifier)
     }
 }
 

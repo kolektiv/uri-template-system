@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::OpenOptions,
     io::BufReader,
     path::Path,
@@ -7,25 +8,54 @@ use std::{
 use anyhow::Result;
 use indexmap::IndexMap;
 use serde::Deserialize;
+use uri_template_system_core as core;
 
 // =============================================================================
 // Process
 // =============================================================================
 
-// Test
+// Tests
 
 // Testcases for URI Template processing are generated from the "official" test
 // cases published at https://github.com/uri-templates/uritemplate-test, and
 // included as a submodule in this repository (./cases/process).
 
-#[ignore]
+// #[ignore]
 #[test]
 fn process_test_cases() -> Result<()> {
-    for (name, cases) in read_files("tests/cases/process")? {
-        for (tpl, exp) in &cases.cases {
-            match exp {
-                Expansion::List(exps) => list(&name, tpl, exps, &cases.variables),
-                Expansion::String(exp) => string(&name, tpl, exp, &cases.variables),
+    for (name, cases) in get_test_cases("tests/cases/process")? {
+        let values = core::Values::from_iter(
+            cases
+                .values
+                .into_iter()
+                .filter_map(|(n, v)| match v {
+                    Value::AssociativeArray(v) => Some((n, core::Value::AssociativeArray(v))),
+                    Value::Item(v) => Some((n, core::Value::Item(v))),
+                    Value::List(v) => Some((n, core::Value::List(v))),
+                    Value::Undefined => None,
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        for (i, (template, expected)) in cases.cases.iter().enumerate() {
+            let actual = core::URITemplate::parse(template)
+                .expect(&format!("template parsing failed ({template})"))
+                .expand(&values)
+                .expect("template expansion failed");
+
+            match expected {
+                Expansion::List(expected) => {
+                    assert!(
+                        expected.contains(&actual),
+                        "{name} ({i}): \"{actual}\" not in {expected:#?} ({values:#?})"
+                    )
+                }
+                Expansion::String(expected) => {
+                    assert!(
+                        expected.eq(&actual),
+                        "{name} ({i}): \"{actual}\" not equal to \"{expected}\" ({values:#?})"
+                    )
+                }
             }
         }
     }
@@ -33,15 +63,9 @@ fn process_test_cases() -> Result<()> {
     Ok(())
 }
 
-fn list(name: &String, tpl: &String, exps: &Vec<String>, vars: &IndexMap<String, Variable>) {
-    assert!(exps.contains(tpl), "{name}: {tpl} ∉ {exps:#?} ({vars:#?})")
-}
-
-fn string(name: &String, tpl: &String, exp: &String, vars: &IndexMap<String, Variable>) {
-    assert!(exp.eq(tpl), "{name}: {tpl} != {exp} ({vars:#?})")
-}
-
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Harness
+// =============================================================================
 
 // Types
 
@@ -50,17 +74,18 @@ fn string(name: &String, tpl: &String, exp: &String, vars: &IndexMap<String, Var
 struct Cases {
     #[serde(default = "default_level")]
     level: u8,
-    variables: IndexMap<String, Variable>,
+    #[serde(rename = "variables")]
+    values: HashMap<String, Value>,
     #[serde(rename = "testcases")]
     cases: Vec<(String, Expansion)>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum Variable {
-    Simple(String),
+enum Value {
+    Item(String),
     List(Vec<String>),
-    AssociativeArray(IndexMap<String, String>),
+    AssociativeArray(HashMap<String, String>),
     Undefined,
 }
 
@@ -77,7 +102,7 @@ fn default_level() -> u8 {
 
 // -----------------------------------------------------------------------------
 
-// Sets
+// Data
 
 const FILES: &[&str] = &[
     "spec-examples.json",
@@ -86,10 +111,10 @@ const FILES: &[&str] = &[
     // "negative-tests.json",
 ];
 
-fn read_files(path: impl AsRef<Path>) -> Result<IndexMap<String, Cases>> {
+fn get_test_cases(path: impl AsRef<Path>) -> Result<IndexMap<String, Cases>> {
     FILES.iter().try_fold(IndexMap::new(), |mut data, file| {
         let path = path.as_ref().join(file);
-        let sets = read_file(path)?;
+        let sets = read_test_cases(path)?;
 
         data.extend(sets.into_iter());
 
@@ -97,7 +122,7 @@ fn read_files(path: impl AsRef<Path>) -> Result<IndexMap<String, Cases>> {
     })
 }
 
-fn read_file(path: impl AsRef<Path>) -> Result<IndexMap<String, Cases>> {
+fn read_test_cases(path: impl AsRef<Path>) -> Result<IndexMap<String, Cases>> {
     let file = OpenOptions::new().read(true).open(path)?;
     let reader = BufReader::new(file);
     let sets = serde_json::from_reader(reader)?;

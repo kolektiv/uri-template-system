@@ -68,14 +68,18 @@ fn is_iprivate(c: char) -> bool {
     }
 }
 
+// Note: The `is_literal` fn does not match the base RFC, but matches the errata
+// which reinstates the "'" character as an allowed literal character. The
+// "official" test cases have some additional tests which exercise this
+// functionality, but it is not obvious!
+
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
 fn is_literal(c: char) -> bool {
     match c {
         | '\x21'
         | '\x23'..='\x24'
-        | '\x26'
-        | '\x28'..='\x3b'
+        | '\x26'..='\x3b'
         | '\x3d'
         | '\x3f'..='\x5b'
         | '\x5d'
@@ -114,6 +118,7 @@ mod tests {
             ("valid%2b invalid", " invalid", "valid%2b"),
             ("valid%2k invalid", "%2k invalid", "valid"),
             ("%2bvalid invalid", " invalid", "%2bvalid"),
+            ("'", "", "'"),
         ]
         .into_iter()
         .enumerate()
