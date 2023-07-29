@@ -68,10 +68,11 @@ fn is_iprivate(c: char) -> bool {
     }
 }
 
-// Note: The `is_literal` fn does not match the base RFC, but matches the errata
-// which reinstates the "'" character as an allowed literal character. The
-// "official" test cases have some additional tests which exercise this
-// functionality, but it is not obvious!
+// Note: The `is_literal` fn does not match the original RFC 6570, but matches
+// the updates made by Errata 6937 which reinstates the "'" character as an
+// allowed literal character. The "official" test cases have some additional
+// tests which exercise this functionality, but it is not obvious that the test
+// cases do not reflect the RFC as-was!
 
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
