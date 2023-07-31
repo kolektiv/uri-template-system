@@ -39,9 +39,9 @@ fn process_test_cases() -> Result<()> {
 
         for (i, (template, expected)) in cases.cases.iter().enumerate() {
             let actual = core::URITemplate::parse(template)
-                .expect(&format!("template parsing failed ({template})"))
+                .expect(&format!("{name} ({i}): template parse error ({template})"))
                 .expand(&values)
-                .expect("template expansion failed");
+                .expect(&format!("{name} ({i}): template expansion error"));
 
             match expected {
                 Expansion::List(expected) => {

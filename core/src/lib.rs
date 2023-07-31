@@ -1,3 +1,4 @@
+mod codec;
 mod common;
 mod expression;
 mod literal;

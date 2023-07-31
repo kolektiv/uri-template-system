@@ -1,6 +1,10 @@
 use anyhow::Result;
 
 use crate::{
+    codec::{
+        self,
+        Encoding,
+    },
     expression::{
         Expression,
         Modifier,
@@ -20,6 +24,16 @@ use crate::{
 // =============================================================================
 // Expand
 // =============================================================================
+
+// Traits
+
+trait Encode {
+    type Context;
+
+    fn encode(&self, value: &Value, output: &mut String, context: &Self::Context);
+}
+
+// -----------------------------------------------------------------------------
 
 // Types
 
@@ -78,7 +92,11 @@ impl Expand for OpLevel2 {
                 prefix: Some('#'),
                 infix: Some(','),
             }),
-            _ => todo!(),
+            Self::Plus => context.expand(output, values, &Expansion {
+                operator: Some(Operator::Level2(OpLevel2::Plus)),
+                prefix: None,
+                infix: Some(','),
+            }),
         }
     }
 }
@@ -93,7 +111,7 @@ impl Expand for OpLevel3 {
         _context: &Self::Context,
     ) -> Result<()> {
         match self {
-            _ => todo!(),
+            _ => todo!(), // TODO: Remaining Operators
         }
     }
 }
@@ -108,7 +126,7 @@ impl Expand for OpReserve {
         _context: &Self::Context,
     ) -> Result<()> {
         match self {
-            _ => todo!(),
+            _ => todo!(), // TODO: Reserved Operator Handling (Failure?)
         }
     }
 }
@@ -121,15 +139,16 @@ impl Expand for Vec<VarSpec> {
             output.push(prefix);
         }
 
-        let last_index = self.len() - 1;
+        let mut defined = self
+            .iter()
+            .filter_map(|var_spec| values.get(&var_spec.0).map(|value| (var_spec, value)))
+            .peekable();
 
-        for (index, var_spec) in self.iter().enumerate() {
-            var_spec.expand(output, values, context)?;
+        while let Some((var_spec, value)) = defined.next() {
+            context.operator.encode(value, output, &var_spec.1);
 
-            if index != last_index {
-                if let Some(infix) = context.infix {
-                    output.push(infix);
-                }
+            if let Some(infix) = defined.peek().and_then(|_| context.infix) {
+                output.push(infix);
             }
         }
 
@@ -137,15 +156,106 @@ impl Expand for Vec<VarSpec> {
     }
 }
 
-impl Expand for VarSpec {
-    type Context = Expansion;
+// -----------------------------------------------------------------------------
 
-    fn expand(&self, output: &mut String, values: &Values, _context: &Self::Context) -> Result<()> {
-        match values.get(&self.0) {
-            Some(Value::Item(item)) => output.push_str(&item),
-            _ => todo!(),
+// Encodings
+
+impl Encode for Option<Operator> {
+    type Context = Option<Modifier>;
+
+    fn encode(&self, value: &Value, output: &mut String, _context: &Self::Context) {
+        match self {
+            Some(_operator) => todo!(),
+            _ => match value {
+                Value::Item(item) => codec::encode(item, output, &Encoding {
+                    allow_encoded: false,
+                    allow: is_unreserved,
+                }),
+                _ => todo!(), // TODO: Remaining Value types
+            },
         }
+    }
+}
 
-        Ok(())
+impl Encode for Operator {
+    type Context = Option<Modifier>;
+
+    fn encode(&self, value: &Value, output: &mut String, context: &Self::Context) {
+        match self {
+            Operator::Level2(operator) => operator.encode(value, output, context),
+            _ => todo!(), // TODO: Remaining Operators
+        }
+    }
+}
+
+impl Encode for OpLevel2 {
+    type Context = Option<Modifier>;
+
+    fn encode(&self, value: &Value, output: &mut String, _context: &Self::Context) {
+        match self {
+            OpLevel2::Plus => match value {
+                Value::Item(item) => codec::encode(item, output, &Encoding {
+                    allow_encoded: true,
+                    allow: |c| is_unreserved(c) || is_reserved(c),
+                }),
+                _ => todo!(), // TODO: Remaining Value types
+            },
+            _ => todo!(), // TODO: Remaining Operators
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Predicates
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_gen_delim(c: char) -> bool {
+    match c {
+        | '\x23'
+        | '\x2f'
+        | '\x3a'
+        | '\x3f'
+        | '\x40'
+        | '\x5b'
+        | '\x5d' => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_sub_delim(c: char) -> bool {
+    match c {
+        | '\x21'
+        | '\x24'
+        | '\x26'..='\x2c'
+        | '\x3b'
+        | '\x3d' => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_reserved(c: char) -> bool {
+    match c {
+        _ if is_gen_delim(c) => true,
+        _ if is_sub_delim(c) => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_unreserved(c: char) -> bool {
+    match c {
+        | '\x41'..='\x5a'
+        | '\x61'..='\x7a'
+        | '\x2d'..='\x2e'
+        | '\x5f'
+        | '\x7e' => true,
+        _ => false,
     }
 }
