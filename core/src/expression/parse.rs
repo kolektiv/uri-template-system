@@ -1,6 +1,7 @@
 use std::slice;
 
 use nom::{
+    branch,
     bytes::complete as bytes,
     character::complete as character,
     multi,
@@ -54,23 +55,21 @@ pub fn expression(input: &str) -> IResult<&str, Expression> {
 }
 
 fn operator(input: &str) -> IResult<&str, Operator> {
-    character::one_of("+#./;?&=,!@|")
-        .map(|c| match c {
-            '+' => Operator::Level2(OpLevel2::Plus),
-            '#' => Operator::Level2(OpLevel2::Hash),
-            '.' => Operator::Level3(OpLevel3::Period),
-            '/' => Operator::Level3(OpLevel3::Slash),
-            ';' => Operator::Level3(OpLevel3::Semicolon),
-            '?' => Operator::Level3(OpLevel3::Question),
-            '&' => Operator::Level3(OpLevel3::Ampersand),
-            '=' => Operator::Reserve(OpReserve::Equals),
-            ',' => Operator::Reserve(OpReserve::Comma),
-            '!' => Operator::Reserve(OpReserve::Exclamation),
-            '@' => Operator::Reserve(OpReserve::At),
-            '|' => Operator::Reserve(OpReserve::Pipe),
-            _ => unreachable!(),
-        })
-        .parse(input)
+    branch::alt((
+        character::char('+').value(Operator::Level2(OpLevel2::Plus)),
+        character::char('#').value(Operator::Level2(OpLevel2::Hash)),
+        character::char('.').value(Operator::Level3(OpLevel3::Period)),
+        character::char('/').value(Operator::Level3(OpLevel3::Slash)),
+        character::char(';').value(Operator::Level3(OpLevel3::Semicolon)),
+        character::char('?').value(Operator::Level3(OpLevel3::Question)),
+        character::char('&').value(Operator::Level3(OpLevel3::Ampersand)),
+        character::char('=').value(Operator::Reserve(OpReserve::Equals)),
+        character::char(',').value(Operator::Reserve(OpReserve::Comma)),
+        character::char('!').value(Operator::Reserve(OpReserve::Exclamation)),
+        character::char('@').value(Operator::Reserve(OpReserve::At)),
+        character::char('|').value(Operator::Reserve(OpReserve::Pipe)),
+    ))
+    .parse(input)
 }
 
 fn variable_list(input: &str) -> IResult<&str, Vec<VarSpec>> {

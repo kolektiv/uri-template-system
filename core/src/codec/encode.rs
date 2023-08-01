@@ -6,13 +6,10 @@ use std::sync::OnceLock;
 
 // Types
 
-#[derive(Debug)]
-pub struct Encoding<P>
-where
-    P: Fn(char) -> bool,
-{
+// #[derive(Debug)]
+pub struct Encoding {
     pub allow_encoded: bool,
-    pub allow: P,
+    pub allow: Box<dyn Fn(char) -> bool + Send + Sync>,
 }
 
 enum Buffer {
@@ -25,17 +22,11 @@ enum Buffer {
 
 // Functions
 
-pub fn encode<P>(input: &str, output: &mut String, encoding: &Encoding<P>)
-where
-    P: Fn(char) -> bool,
-{
+pub fn encode(input: &str, output: &mut String, encoding: &Encoding) {
     push_str(input, output, encoding);
 }
 
-fn push_str<P>(input: &str, output: &mut String, encoding: &Encoding<P>)
-where
-    P: Fn(char) -> bool,
-{
+fn push_str(input: &str, output: &mut String, encoding: &Encoding) {
     let mut buffer = Buffer::Empty;
 
     for input in input.chars() {
@@ -80,10 +71,7 @@ where
     }
 }
 
-fn push_char<P>(input: char, output: &mut String, encoding: &Encoding<P>)
-where
-    P: Fn(char) -> bool,
-{
+fn push_char(input: char, output: &mut String, encoding: &Encoding) {
     if (&encoding.allow)(input) {
         push_char_utf8(input, output);
     } else {

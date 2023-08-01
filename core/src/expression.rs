@@ -1,3 +1,4 @@
+mod encode;
 mod expand;
 mod parse;
 
@@ -7,7 +8,7 @@ mod parse;
 
 // Types
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Expression(Vec<VarSpec>, Option<Operator>);
 
 impl Expression {
@@ -16,7 +17,7 @@ impl Expression {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 struct VarSpec(String, Option<Modifier>);
 
 impl VarSpec {
@@ -26,26 +27,26 @@ impl VarSpec {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Modifier {
     Prefix(usize),
     Explode,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Operator {
     Level2(OpLevel2),
     Level3(OpLevel3),
     Reserve(OpReserve),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum OpLevel2 {
     Plus,
     Hash,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum OpLevel3 {
     Period,
     Slash,
@@ -54,7 +55,7 @@ enum OpLevel3 {
     Ampersand,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum OpReserve {
     Equals,
     Comma,
