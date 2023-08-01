@@ -1,9 +1,11 @@
 use crate::{
     expression::{
         Expression,
+        Fragment,
         OpLevel2,
         OpLevel3,
         Operator,
+        Reserved,
         VarSpec,
     },
     value::Values,
@@ -79,8 +81,8 @@ impl Expand<Values, Vec<VarSpec>> for Operator {
 impl Expand<Values, Vec<VarSpec>> for OpLevel2 {
     fn expand(&self, output: &mut String, values: &Values, context: &Vec<VarSpec>) {
         let (operator, prefix, infix) = match self {
-            Self::Hash => (OpLevel2::Hash, Some('#'), Some(',')),
-            Self::Plus => (OpLevel2::Plus, None, Some(',')),
+            Self::Fragment(Fragment) => (OpLevel2::Fragment(Fragment), Some('#'), Some(',')),
+            Self::Reserved(Reserved) => (OpLevel2::Reserved(Reserved), None, Some(',')),
         };
 
         context.expand(output, values, &Expansion {
@@ -94,11 +96,11 @@ impl Expand<Values, Vec<VarSpec>> for OpLevel2 {
 impl Expand<Values, Vec<VarSpec>> for OpLevel3 {
     fn expand(&self, output: &mut String, values: &Values, context: &Vec<VarSpec>) {
         let (operator, prefix, infix) = match self {
-            Self::Period => (OpLevel3::Period, '.', '.'),
-            Self::Slash => (OpLevel3::Slash, '/', '/'),
-            Self::Semicolon => (OpLevel3::Semicolon, ';', ';'),
-            Self::Question => (OpLevel3::Question, '?', '&'),
-            Self::Ampersand => (OpLevel3::Ampersand, '&', '&'),
+            Self::Label => (OpLevel3::Label, '.', '.'),
+            Self::Path => (OpLevel3::Path, '/', '/'),
+            Self::PathParameter => (OpLevel3::PathParameter, ';', ';'),
+            Self::Query => (OpLevel3::Query, '?', '&'),
+            Self::QueryContinuation => (OpLevel3::QueryContinuation, '&', '&'),
         };
 
         context.expand(output, values, &Expansion {

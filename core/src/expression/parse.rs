@@ -15,11 +15,13 @@ use crate::{
     common,
     expression::{
         Expression,
+        Fragment,
         Modifier,
         OpLevel2,
         OpLevel3,
         OpReserve,
         Operator,
+        Reserved,
         VarSpec,
     },
 };
@@ -56,13 +58,13 @@ pub fn expression(input: &str) -> IResult<&str, Expression> {
 
 fn operator(input: &str) -> IResult<&str, Operator> {
     branch::alt((
-        character::char('+').value(Operator::Level2(OpLevel2::Plus)),
-        character::char('#').value(Operator::Level2(OpLevel2::Hash)),
-        character::char('.').value(Operator::Level3(OpLevel3::Period)),
-        character::char('/').value(Operator::Level3(OpLevel3::Slash)),
-        character::char(';').value(Operator::Level3(OpLevel3::Semicolon)),
-        character::char('?').value(Operator::Level3(OpLevel3::Question)),
-        character::char('&').value(Operator::Level3(OpLevel3::Ampersand)),
+        character::char('+').value(Operator::Level2(OpLevel2::Reserved(Reserved))),
+        character::char('#').value(Operator::Level2(OpLevel2::Fragment(Fragment))),
+        character::char('.').value(Operator::Level3(OpLevel3::Label)),
+        character::char('/').value(Operator::Level3(OpLevel3::Path)),
+        character::char(';').value(Operator::Level3(OpLevel3::PathParameter)),
+        character::char('?').value(Operator::Level3(OpLevel3::Query)),
+        character::char('&').value(Operator::Level3(OpLevel3::QueryContinuation)),
         character::char('=').value(Operator::Reserve(OpReserve::Equals)),
         character::char(',').value(Operator::Reserve(OpReserve::Comma)),
         character::char('!').value(Operator::Reserve(OpReserve::Exclamation)),

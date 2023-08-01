@@ -3,9 +3,11 @@ use std::sync::OnceLock;
 use crate::{
     codec::Encoding,
     expression::{
+        Fragment,
         OpLevel2,
         OpLevel3,
         Operator,
+        Reserved,
         VarSpec,
     },
     value::Value,
@@ -16,7 +18,7 @@ use crate::{
 // Value
 // =============================================================================
 
-// Expansion
+// Operator
 
 impl Expand<Value, VarSpec> for Option<Operator> {
     fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
@@ -40,25 +42,49 @@ impl Expand<Value, VarSpec> for Operator {
     }
 }
 
+// -----------------------------------------------------------------------------
+
+// Operator Level 2
+
 impl Expand<Value, VarSpec> for OpLevel2 {
     fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
         match self {
-            OpLevel2::Hash | OpLevel2::Plus => match value {
-                Value::Item(value) => context.1.expand(output, value, reserved()),
-                _ => todo!(), // TODO: Remaining Value types
-            },
+            OpLevel2::Fragment(operator) => operator.expand(output, value, context),
+            OpLevel2::Reserved(operator) => operator.expand(output, value, context),
         }
     }
 }
 
+impl Expand<Value, VarSpec> for Fragment {
+    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
+        match value {
+            Value::Item(value) => context.1.expand(output, value, reserved()),
+            _ => todo!(),
+        }
+    }
+}
+
+impl Expand<Value, VarSpec> for Reserved {
+    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
+        match value {
+            Value::Item(value) => context.1.expand(output, value, reserved()),
+            _ => todo!(),
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Operator Level 3
+
 impl Expand<Value, VarSpec> for OpLevel3 {
     fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
         match self {
-            OpLevel3::Period | OpLevel3::Slash => match value {
+            OpLevel3::Label | OpLevel3::Path => match value {
                 Value::Item(value) => context.1.expand(output, value, unreserved()),
                 _ => todo!(),
             },
-            OpLevel3::Semicolon => match value {
+            OpLevel3::PathParameter => match value {
                 Value::Item(value) => {
                     output.push_str(&context.0);
 
@@ -70,7 +96,7 @@ impl Expand<Value, VarSpec> for OpLevel3 {
                 }
                 _ => todo!(),
             },
-            OpLevel3::Question | OpLevel3::Ampersand => match value {
+            OpLevel3::Query | OpLevel3::QueryContinuation => match value {
                 Value::Item(value) => {
                     output.push_str(&context.0);
                     output.push('=');

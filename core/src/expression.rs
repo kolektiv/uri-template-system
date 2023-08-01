@@ -42,17 +42,23 @@ enum Operator {
 
 #[derive(Clone, Debug, PartialEq)]
 enum OpLevel2 {
-    Plus,
-    Hash,
+    Reserved(Reserved),
+    Fragment(Fragment),
 }
 
 #[derive(Clone, Debug, PartialEq)]
+struct Reserved;
+
+#[derive(Clone, Debug, PartialEq)]
+struct Fragment;
+
+#[derive(Clone, Debug, PartialEq)]
 enum OpLevel3 {
-    Period,
-    Slash,
-    Semicolon,
-    Question,
-    Ampersand,
+    Label,
+    Path,
+    PathParameter,
+    Query,
+    QueryContinuation,
 }
 
 #[derive(Clone, Debug, PartialEq)]

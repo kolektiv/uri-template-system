@@ -32,3 +32,15 @@ impl Expand<String, Encoding> for Modifier {
         }
     }
 }
+
+// None:
+//
+// Simple: List - v,v,v
+//         Hash - k,v,k,v
+//
+// Explode:
+//
+// Simple: List - v,v,v
+//         Hash - k=v,k=v
+// Reserved:
+//
