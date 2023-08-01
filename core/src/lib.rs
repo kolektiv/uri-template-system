@@ -1,7 +1,5 @@
 mod codec;
-mod common;
-mod expression;
-mod literal;
+
 mod template;
 mod value;
 
@@ -33,7 +31,7 @@ pub struct URITemplate {
 
 impl URITemplate {
     pub fn parse(input: impl Into<String>) -> Result<Self> {
-        let template = template::parse(&input.into())
+        let template = Template::parse(&input.into())
             .map(|(_, template)| template)
             .map_err(|_| Error::msg("uri template parse failed"))?; // TODO: Proper Error
 

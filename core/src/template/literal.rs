@@ -7,30 +7,43 @@ use nom::{
 use nom_supreme::ParserExt;
 
 use crate::{
-    common,
-    literal::Literal,
+    template::common,
+    value::Values,
+    Expand,
 };
 
-// =============================================================================
-// Parse
+// =================================================s============================
+// Literal
 // =============================================================================
 
-// Parsers
+// Types
 
-pub fn literal(input: &str) -> IResult<&str, Literal> {
-    multi::many1(
-        bytes::take_while1(is_literal)
-            .recognize()
-            .or(common::percent_encoded),
-    )
-    .map(|output| output.concat())
-    .map(Literal)
-    .parse(input)
+#[derive(Debug, PartialEq)]
+pub struct Literal(String);
+
+impl Literal {
+    #[allow(dead_code)]
+    fn new(literal: impl Into<String>) -> Self {
+        Self(literal.into())
+    }
 }
 
 // -----------------------------------------------------------------------------
 
-// Predicates
+// Parsing
+
+impl Literal {
+    pub fn parse(input: &str) -> IResult<&str, Literal> {
+        multi::many1(
+            bytes::take_while1(is_literal)
+                .recognize()
+                .or(common::percent_encoded),
+        )
+        .map(|output| output.concat())
+        .map(Literal)
+        .parse(input)
+    }
+}
 
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
@@ -95,58 +108,19 @@ fn is_literal(c: char) -> bool {
 
 // -----------------------------------------------------------------------------
 
-// Tests
+// Expansion
 
-#[cfg(test)]
-mod tests {
-    use nom::{
-        error::{
-            Error,
-            ErrorKind,
-        },
-        Err,
-    };
-
-    use super::*;
-
-    // Literal
-
-    #[test]
-    fn literal_ok() {
-        [
-            ("valid", "", "valid"),
-            ("valid invalid", " invalid", "valid"),
-            ("valid%2b invalid", " invalid", "valid%2b"),
-            ("valid%2k invalid", "%2k invalid", "valid"),
-            ("%2bvalid invalid", " invalid", "%2bvalid"),
-            ("'", "", "'"),
-        ]
-        .into_iter()
-        .enumerate()
-        .for_each(|(i, (input, rest, ok))| {
-            assert_eq!(
-                literal(input),
-                Ok((rest, Literal::new(ok))),
-                "Test Case {i}"
-            );
-        });
-    }
-
-    #[test]
-    fn literal_err() {
-        [
-            (" invalid", " invalid", ErrorKind::Char),
-            ("|invalid", "|invalid", ErrorKind::Char),
-            ("%2ketc", "2ketc", ErrorKind::TakeWhileMN),
-        ]
-        .into_iter()
-        .enumerate()
-        .for_each(|(i, (input, rest, kind))| {
-            assert_eq!(
-                literal(input),
-                Err(Err::Error(Error::new(rest, kind))),
-                "Test Case {i}"
-            );
-        });
+impl Expand<Values, ()> for Literal {
+    // TODO: Percentage-Encoding/Validation
+    fn expand(&self, output: &mut String, _value: &Values, _context: &()) {
+        output.push_str(&self.0);
     }
 }
+
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+
+// Re-Export
+
+// pub use self::parse::literal as parse;
