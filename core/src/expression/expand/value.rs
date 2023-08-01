@@ -1,86 +1,61 @@
 use std::sync::OnceLock;
 
 use crate::{
-    codec::{
-        self,
-        Encoding,
-    },
+    codec::Encoding,
     expression::{
-        Modifier,
         OpLevel2,
         OpLevel3,
         Operator,
         VarSpec,
     },
     value::Value,
+    Expand,
 };
 
 // =============================================================================
-// Encode
+// Value
 // =============================================================================
 
-// Traits
+// Expansion
 
-pub trait Encode {
-    type Context;
-    type Value;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context);
-}
-// -----------------------------------------------------------------------------
-
-// Encode
-
-impl Encode for Option<Operator> {
-    type Context = VarSpec;
-    type Value = Value;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context) {
+impl Expand<Value, VarSpec> for Option<Operator> {
+    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
         match self {
-            Some(operator) => operator.encode(value, output, context),
+            Some(operator) => operator.expand(output, value, context),
             _ => match value {
-                Value::Item(value) => context.1.encode(value, output, unreserved()),
+                Value::Item(value) => context.1.expand(output, value, unreserved()),
                 _ => todo!(), // TODO: Remaining Value types
             },
         }
     }
 }
 
-impl Encode for Operator {
-    type Context = VarSpec;
-    type Value = Value;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context) {
+impl Expand<Value, VarSpec> for Operator {
+    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
         match self {
-            Operator::Level2(operator) => operator.encode(value, output, context),
-            Operator::Level3(operator) => operator.encode(value, output, context),
+            Operator::Level2(operator) => operator.expand(output, value, context),
+            Operator::Level3(operator) => operator.expand(output, value, context),
             _ => unreachable!(),
         }
     }
 }
 
-impl Encode for OpLevel2 {
-    type Context = VarSpec;
-    type Value = Value;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context) {
+impl Expand<Value, VarSpec> for OpLevel2 {
+    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
         match self {
             OpLevel2::Hash | OpLevel2::Plus => match value {
-                Value::Item(value) => context.1.encode(value, output, reserved()),
+                Value::Item(value) => context.1.expand(output, value, reserved()),
                 _ => todo!(), // TODO: Remaining Value types
             },
         }
     }
 }
 
-impl Encode for OpLevel3 {
-    type Context = VarSpec;
-    type Value = Value;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context) {
+impl Expand<Value, VarSpec> for OpLevel3 {
+    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
         match self {
             OpLevel3::Period | OpLevel3::Slash => match value {
-                Value::Item(value) => context.1.encode(value, output, unreserved()),
+                Value::Item(value) => context.1.expand(output, value, unreserved()),
                 _ => todo!(),
             },
             OpLevel3::Semicolon => match value {
@@ -90,7 +65,7 @@ impl Encode for OpLevel3 {
                     if !value.is_empty() {
                         output.push('=');
 
-                        context.1.encode(value, output, unreserved())
+                        context.1.expand(output, value, unreserved())
                     }
                 }
                 _ => todo!(),
@@ -100,36 +75,10 @@ impl Encode for OpLevel3 {
                     output.push_str(&context.0);
                     output.push('=');
 
-                    context.1.encode(value, output, unreserved())
+                    context.1.expand(output, value, unreserved())
                 }
                 _ => todo!(),
             },
-        }
-    }
-}
-
-impl Encode for Option<Modifier> {
-    type Context = Encoding;
-    type Value = String;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context) {
-        match self {
-            Some(modifier) => modifier.encode(value, output, context),
-            _ => codec::encode(value, output, context),
-        }
-    }
-}
-
-impl Encode for Modifier {
-    type Context = Encoding;
-    type Value = String;
-
-    fn encode(&self, value: &Self::Value, output: &mut String, context: &Self::Context) {
-        match self {
-            Modifier::Explode => codec::encode(value, output, context),
-            Modifier::Prefix(max_len) => {
-                codec::encode(&value[..(*max_len).min(value.len())], output, context)
-            }
         }
     }
 }

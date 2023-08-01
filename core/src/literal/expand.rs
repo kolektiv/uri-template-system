@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 use crate::{
     literal::Literal,
     value::Values,
@@ -10,13 +8,9 @@ use crate::{
 // Expand
 // =============================================================================
 
-impl Expand for Literal {
-    type Context = ();
-
+impl Expand<Values, ()> for Literal {
     // TODO: Percentage-Encoding/Validation
-    fn expand(&self, output: &mut String, _: &Values, _: &Self::Context) -> Result<()> {
+    fn expand(&self, output: &mut String, _value: &Values, _context: &()) {
         output.push_str(&self.0);
-
-        Ok(())
     }
 }

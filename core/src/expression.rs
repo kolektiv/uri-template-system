@@ -1,4 +1,4 @@
-mod encode;
+// mod encode;
 mod expand;
 mod parse;
 

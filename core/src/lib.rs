@@ -18,10 +18,8 @@ use crate::template::Template;
 
 // Traits
 
-trait Expand {
-    type Context;
-
-    fn expand(&self, output: &mut String, values: &Values, context: &Self::Context) -> Result<()>;
+trait Expand<V, C> {
+    fn expand(&self, output: &mut String, value: &V, context: &C);
 }
 
 // -----------------------------------------------------------------------------
@@ -42,11 +40,11 @@ impl URITemplate {
         Ok(Self { template: template })
     }
 
-    pub fn expand(&self, values: &Values) -> Result<String> {
+    pub fn expand(&self, values: &Values) -> String {
         let mut output = String::new();
-        let _ = self.template.expand(&mut output, values, &())?;
+        let _ = self.template.expand(&mut output, values, &());
 
-        Ok(output)
+        output
     }
 }
 
