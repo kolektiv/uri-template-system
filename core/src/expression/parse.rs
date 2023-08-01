@@ -15,6 +15,10 @@ use crate::{
     expression::{
         Expression,
         Modifier,
+        OpLevel2,
+        OpLevel3,
+        OpReserve,
+        Operator,
         VarSpec,
     },
 };
@@ -40,8 +44,32 @@ use crate::{
 // remaining input.
 
 pub fn expression(input: &str) -> IResult<&str, Expression> {
-    sequence::delimited(character::char('{'), variable_list, character::char('}'))
-        .map(|variable_list| Expression::new(variable_list, None)) // TODO: Operator!
+    sequence::delimited(
+        character::char('{'),
+        operator.opt().and(variable_list),
+        character::char('}'),
+    )
+    .map(|(operator, variable_list)| Expression::new(variable_list, operator))
+    .parse(input)
+}
+
+fn operator(input: &str) -> IResult<&str, Operator> {
+    character::one_of("+#./;?&=,!@|")
+        .map(|c| match c {
+            '+' => Operator::Level2(OpLevel2::Plus),
+            '#' => Operator::Level2(OpLevel2::Hash),
+            '.' => Operator::Level3(OpLevel3::Period),
+            '/' => Operator::Level3(OpLevel3::Slash),
+            ';' => Operator::Level3(OpLevel3::Semicolon),
+            '?' => Operator::Level3(OpLevel3::Question),
+            '&' => Operator::Level3(OpLevel3::Ampersand),
+            '=' => Operator::Reserve(OpReserve::Equals),
+            ',' => Operator::Reserve(OpReserve::Comma),
+            '!' => Operator::Reserve(OpReserve::Exclamation),
+            '@' => Operator::Reserve(OpReserve::At),
+            '|' => Operator::Reserve(OpReserve::Pipe),
+            _ => unreachable!(),
+        })
         .parse(input)
 }
 
