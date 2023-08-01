@@ -1,4 +1,7 @@
-use anyhow::Result;
+use anyhow::{
+    Error,
+    Result,
+};
 
 use crate::{
     codec::{
@@ -7,10 +10,9 @@ use crate::{
     },
     expression::{
         Expression,
-        Modifier,
+        // Modifier,
         OpLevel2,
         OpLevel3,
-        OpReserve,
         Operator,
         VarSpec,
     },
@@ -77,7 +79,7 @@ impl Expand for Operator {
         match self {
             Self::Level2(operator) => operator.expand(output, values, context),
             Self::Level3(operator) => operator.expand(output, values, context),
-            Self::Reserve(operator) => operator.expand(output, values, context),
+            Self::Reserve(_operator) => Err(Error::msg("unsupported reserved operator")),
         }
     }
 }
@@ -86,18 +88,16 @@ impl Expand for OpLevel2 {
     type Context = Vec<VarSpec>;
 
     fn expand(&self, output: &mut String, values: &Values, context: &Self::Context) -> Result<()> {
-        match self {
-            Self::Hash => context.expand(output, values, &Expansion {
-                operator: Some(Operator::Level2(OpLevel2::Hash)),
-                prefix: Some('#'),
-                infix: Some(','),
-            }),
-            Self::Plus => context.expand(output, values, &Expansion {
-                operator: Some(Operator::Level2(OpLevel2::Plus)),
-                prefix: None,
-                infix: Some(','),
-            }),
-        }
+        let (operator, prefix, infix) = match self {
+            Self::Hash => (OpLevel2::Hash, Some('#'), Some(',')),
+            Self::Plus => (OpLevel2::Plus, None, Some(',')),
+        };
+
+        context.expand(output, values, &Expansion {
+            operator: Some(Operator::Level2(operator)),
+            prefix,
+            infix,
+        })
     }
 }
 
@@ -105,34 +105,19 @@ impl Expand for OpLevel3 {
     type Context = Vec<VarSpec>;
 
     fn expand(&self, output: &mut String, values: &Values, context: &Self::Context) -> Result<()> {
-        match self {
-            Self::Period => context.expand(output, values, &Expansion {
-                operator: Some(Operator::Level3(OpLevel3::Period)),
-                prefix: Some('.'),
-                infix: Some('.'),
-            }),
-            Self::Slash => context.expand(output, values, &Expansion {
-                operator: Some(Operator::Level3(OpLevel3::Slash)),
-                prefix: Some('/'),
-                infix: Some('/'),
-            }),
-            _ => todo!(), // TODO: Remaining Operators
-        }
-    }
-}
+        let (operator, prefix, infix) = match self {
+            Self::Period => (OpLevel3::Period, '.', '.'),
+            Self::Slash => (OpLevel3::Slash, '/', '/'),
+            Self::Semicolon => (OpLevel3::Semicolon, ';', ';'),
+            Self::Question => (OpLevel3::Question, '?', '&'),
+            Self::Ampersand => (OpLevel3::Ampersand, '&', '&'),
+        };
 
-impl Expand for OpReserve {
-    type Context = Vec<VarSpec>;
-
-    fn expand(
-        &self,
-        _output: &mut String,
-        _values: &Values,
-        _context: &Self::Context,
-    ) -> Result<()> {
-        match self {
-            _ => todo!(), // TODO: Reserved Operator Handling (Failure?)
-        }
+        context.expand(output, values, &Expansion {
+            operator: Some(Operator::Level3(operator)),
+            prefix: Some(prefix),
+            infix: Some(infix),
+        })
     }
 }
 
@@ -150,7 +135,7 @@ impl Expand for Vec<VarSpec> {
         }
 
         while let Some((var_spec, value)) = defined.next() {
-            context.operator.encode(value, output, &var_spec.1);
+            context.operator.encode(value, output, &var_spec);
 
             if let Some(infix) = defined.peek().and_then(|_| context.infix) {
                 output.push(infix);
@@ -166,7 +151,7 @@ impl Expand for Vec<VarSpec> {
 // Encodings
 
 impl Encode for Option<Operator> {
-    type Context = Option<Modifier>;
+    type Context = VarSpec;
 
     fn encode(&self, value: &Value, output: &mut String, context: &Self::Context) {
         match self {
@@ -183,19 +168,19 @@ impl Encode for Option<Operator> {
 }
 
 impl Encode for Operator {
-    type Context = Option<Modifier>;
+    type Context = VarSpec;
 
     fn encode(&self, value: &Value, output: &mut String, context: &Self::Context) {
         match self {
             Operator::Level2(operator) => operator.encode(value, output, context),
             Operator::Level3(operator) => operator.encode(value, output, context),
-            _ => todo!(), // TODO: Remaining Operators
+            _ => unreachable!(),
         }
     }
 }
 
 impl Encode for OpLevel2 {
-    type Context = Option<Modifier>;
+    type Context = VarSpec;
 
     fn encode(&self, value: &Value, output: &mut String, _context: &Self::Context) {
         match self {
@@ -211,9 +196,9 @@ impl Encode for OpLevel2 {
 }
 
 impl Encode for OpLevel3 {
-    type Context = Option<Modifier>;
+    type Context = VarSpec;
 
-    fn encode(&self, value: &Value, output: &mut String, _context: &Self::Context) {
+    fn encode(&self, value: &Value, output: &mut String, context: &Self::Context) {
         match self {
             OpLevel3::Period | OpLevel3::Slash => match value {
                 Value::Item(item) => codec::encode(item, output, &Encoding {
@@ -222,7 +207,33 @@ impl Encode for OpLevel3 {
                 }),
                 _ => todo!(),
             },
-            _ => todo!(),
+            OpLevel3::Semicolon => match value {
+                Value::Item(item) => {
+                    output.push_str(&context.0);
+
+                    if !item.is_empty() {
+                        output.push('=');
+
+                        codec::encode(item, output, &Encoding {
+                            allow_encoded: false,
+                            allow: is_unreserved,
+                        })
+                    }
+                }
+                _ => todo!(),
+            },
+            OpLevel3::Question | OpLevel3::Ampersand => match value {
+                Value::Item(item) => {
+                    output.push_str(&context.0);
+                    output.push('=');
+
+                    codec::encode(item, output, &Encoding {
+                        allow_encoded: false,
+                        allow: is_unreserved,
+                    })
+                }
+                _ => todo!(),
+            },
         }
     }
 }
