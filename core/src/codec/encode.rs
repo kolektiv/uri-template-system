@@ -20,43 +20,48 @@ enum Buffer {
 
 impl Buffer {
     fn extend(&mut self, output: &mut String, encoding: &Encoding, input: char) -> Option<char> {
-        match (&self, is_hex_digit(input), is_percent(input)) {
-            (Self::HexDigit(hex_digit), true, _) => {
-                push_char_utf8('%', output);
-                push_char_utf8(*hex_digit, output);
-                push_char_utf8(input, output);
+        match &self {
+            Self::HexDigit(_) if is_hex_digit(input) => {
+                self.complete(output, input);
 
                 *self = Self::Empty;
-
                 None
             }
-            (Self::HexDigit(_), _, true) | (Self::Percent, _, true) | (Self::Empty, _, true) => {
+            Self::Percent if is_hex_digit(input) => {
+                *self = Self::HexDigit(input);
+                None
+            }
+            _ if is_percent(input) => {
                 self.flush(output, encoding);
 
                 *self = Self::Percent;
-
-                None
-            }
-            (Self::Percent, true, _) => {
-                *self = Self::HexDigit(input);
-
                 None
             }
             _ => {
                 self.flush(output, encoding);
 
                 *self = Self::Empty;
-
                 Some(input)
             }
         }
     }
 
+    fn complete(&self, output: &mut String, input: char) {
+        match self {
+            Buffer::HexDigit(hex_digit) => {
+                push_char_utf8('%', output);
+                push_char_utf8(*hex_digit, output);
+                push_char_utf8(input, output);
+            }
+            _ => {}
+        }
+    }
+
     fn flush(&self, output: &mut String, encoding: &Encoding) {
-        match *self {
+        match self {
             Buffer::HexDigit(hex_digit) => {
                 push_char('%', output, encoding);
-                push_char(hex_digit, output, encoding);
+                push_char(*hex_digit, output, encoding);
             }
             Buffer::Percent => {
                 push_char('%', output, encoding);
