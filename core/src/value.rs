@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 // =============================================================================
 // Values
@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Values {
-    pub values: HashMap<String, Value>,
+    pub values: IndexMap<String, Value>,
 }
 
 impl Values {
@@ -17,7 +17,7 @@ impl Values {
         T: IntoIterator<Item = (String, Value)>,
     {
         Self {
-            values: HashMap::from_iter(iter),
+            values: IndexMap::from_iter(iter),
         }
     }
 
@@ -38,5 +38,5 @@ impl Values {
 pub enum Value {
     Item(String),
     List(Vec<String>),
-    AssociativeArray(HashMap<String, String>),
+    AssociativeArray(IndexMap<String, String>),
 }

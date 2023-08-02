@@ -20,7 +20,6 @@ use uri_template_system_core as core;
 // cases published at https://github.com/uri-templates/uritemplate-test, and
 // included as a submodule in this repository (./cases/process).
 
-// #[ignore]
 #[test]
 fn process_test_cases() -> Result<()> {
     for (name, cases) in get_test_cases("tests/cases/process")? {
@@ -32,6 +31,7 @@ fn process_test_cases() -> Result<()> {
                     Value::AssociativeArray(v) => Some((n, core::Value::AssociativeArray(v))),
                     Value::Item(v) => Some((n, core::Value::Item(v))),
                     Value::List(v) => Some((n, core::Value::List(v))),
+                    Value::Number(v) => Some((n, core::Value::Item(v.to_string()))),
                     Value::Undefined => None,
                 })
                 .collect::<Vec<_>>(),
@@ -84,7 +84,8 @@ struct Cases {
 enum Value {
     Item(String),
     List(Vec<String>),
-    AssociativeArray(HashMap<String, String>),
+    AssociativeArray(IndexMap<String, String>),
+    Number(f32),
     Undefined,
 }
 
@@ -106,7 +107,7 @@ fn default_level() -> u8 {
 const FILES: &[&str] = &[
     "spec-examples.json",
     "spec-examples-by-section.json",
-    // "extended-tests.json",
+    "extended-tests.json",
     // "negative-tests.json",
 ];
 

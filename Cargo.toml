@@ -3,6 +3,7 @@ members = ["core"]
 
 [workspace.dependencies]
 anyhow = "1"
+indexmap = { version = "2", features = ["serde"] }
 nom = "7"
 nom-supreme = "0.8"
 serde = { version = "1", features = ["derive"] }

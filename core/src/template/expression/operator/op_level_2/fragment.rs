@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use nom::{
     character::complete as character,
     IResult,
@@ -103,8 +102,8 @@ impl Expand<Vec<String>, VarSpec> for Fragment {
     }
 }
 
-impl Expand<HashMap<String, String>, VarSpec> for Fragment {
-    fn expand(&self, output: &mut String, values: &HashMap<String, String>, var_spec: &VarSpec) {
+impl Expand<IndexMap<String, String>, VarSpec> for Fragment {
+    fn expand(&self, output: &mut String, values: &IndexMap<String, String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
         let infix = match var_spec.1 {
