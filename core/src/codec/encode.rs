@@ -18,6 +18,54 @@ enum Buffer {
     HexDigit(char),
 }
 
+impl Buffer {
+    fn extend(&mut self, output: &mut String, encoding: &Encoding, input: char) -> Option<char> {
+        match (&self, is_hex_digit(input), is_percent(input)) {
+            (Self::HexDigit(hex_digit), true, _) => {
+                push_char_utf8('%', output);
+                push_char_utf8(*hex_digit, output);
+                push_char_utf8(input, output);
+
+                *self = Self::Empty;
+
+                None
+            }
+            (Self::HexDigit(_), _, true) | (Self::Percent, _, true) | (Self::Empty, _, true) => {
+                self.flush(output, encoding);
+
+                *self = Self::Percent;
+
+                None
+            }
+            (Self::Percent, true, _) => {
+                *self = Self::HexDigit(input);
+
+                None
+            }
+            _ => {
+                self.flush(output, encoding);
+
+                *self = Self::Empty;
+
+                Some(input)
+            }
+        }
+    }
+
+    fn flush(&self, output: &mut String, encoding: &Encoding) {
+        match *self {
+            Buffer::HexDigit(hex_digit) => {
+                push_char('%', output, encoding);
+                push_char(hex_digit, output, encoding);
+            }
+            Buffer::Percent => {
+                push_char('%', output, encoding);
+            }
+            _ => {}
+        }
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // Functions
@@ -31,44 +79,15 @@ fn push_str(input: &str, output: &mut String, encoding: &Encoding) {
 
     for input in input.chars() {
         if encoding.allow_encoded {
-            match buffer {
-                Buffer::HexDigit(hex_digit) => {
-                    if is_hex_digit(input) {
-                        push_char_utf8('&', output);
-                        push_char_utf8(hex_digit, output);
-                        push_char_utf8(input, output);
-
-                        buffer = Buffer::Empty;
-
-                        continue;
-                    } else {
-                        push_char('%', output, encoding);
-                        push_char(hex_digit, output, encoding);
-                    }
-                }
-                Buffer::Percent => {
-                    if is_hex_digit(input) {
-                        buffer = Buffer::HexDigit(input);
-
-                        continue;
-                    } else {
-                        push_char('%', output, encoding);
-                    }
-                }
-                _ => {}
+            if let Some(input) = buffer.extend(output, encoding, input) {
+                push_char(input, output, encoding);
             }
-
-            if is_percent(input) {
-                buffer = Buffer::Percent;
-
-                continue;
-            }
-
-            buffer = Buffer::Empty;
+        } else {
+            push_char(input, output, encoding);
         }
-
-        push_char(input, output, encoding);
     }
+
+    buffer.flush(output, encoding);
 }
 
 fn push_char(input: char, output: &mut String, encoding: &Encoding) {
@@ -93,6 +112,24 @@ fn push_char_percent(input: char, output: &mut String) {
                 .iter()
                 .for_each(|char| output.push(*char))
         });
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_hex_digit(c: char) -> bool {
+    match c {
+        _ if c.is_ascii_hexdigit() => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+fn is_percent(c: char) -> bool {
+    match c {
+        _ if c == '%' => true,
+        _ => false,
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -122,26 +159,4 @@ fn get_encoded(input: u8) -> &'static [char; 3] {
         .get_or_init(init_encoded)
         .get(usize::from(input))
         .unwrap()
-}
-
-// -----------------------------------------------------------------------------
-
-// Predicates
-
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-fn is_hex_digit(c: char) -> bool {
-    match c {
-        _ if c.is_ascii_hexdigit() => true,
-        _ => false,
-    }
-}
-
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-fn is_percent(c: char) -> bool {
-    match c {
-        _ if c == '%' => true,
-        _ => false,
-    }
 }

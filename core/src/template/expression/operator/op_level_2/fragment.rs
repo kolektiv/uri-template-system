@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nom::{
     character::complete as character,
     IResult,
@@ -9,9 +11,8 @@ use crate::{
     codec,
     template::{
         common,
+        expression::var_spec,
         Modifier,
-        OpLevel2,
-        Operator,
         Prefix,
         VarSpec,
     },
@@ -45,59 +46,80 @@ impl Fragment {
 
 // Expansion
 
-const FRAGMENT: Option<Operator> = Some(Operator::Level2(OpLevel2::Fragment(Fragment)));
-const FRAGMENT_PREFIX: char = '#';
-const FRAGMENT_INFIX: char = ',';
+const PREFIX: char = '#';
+const INFIX: char = ',';
 
 impl Expand<Values, Vec<VarSpec>> for Fragment {
-    fn expand(&self, output: &mut String, value: &Values, context: &Vec<VarSpec>) {
-        let mut defined = VarSpec::defined(context, value);
+    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
+        let mut values = var_spec::defined(var_specs, values);
 
-        if defined.peek().is_some() {
-            output.push(FRAGMENT_PREFIX);
+        if values.peek().is_some() {
+            output.push(PREFIX);
         }
 
-        while let Some((value, var_spec)) = defined.next() {
-            var_spec.expand(output, value, &FRAGMENT);
+        while let Some((value, var_spec)) = values.next() {
+            self.expand(output, value, var_spec);
 
-            if defined.peek().is_some() {
-                output.push(FRAGMENT_INFIX);
+            if values.peek().is_some() {
+                output.push(INFIX);
             }
         }
     }
 }
 
 impl Expand<Value, VarSpec> for Fragment {
-    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
+    fn expand(&self, output: &mut String, value: &Value, var_spec: &VarSpec) {
         match value {
-            Value::Item(value) => context.expand(output, value, &FRAGMENT),
-            Value::List(value) => value
-                .iter()
-                .for_each(|value| codec::encode(value, output, common::reserved())),
-            Value::AssociativeArray(value) => match context.1 {
-                Some(Modifier::Explode(_)) => value.iter().for_each(|(key, value)| {
-                    output.push_str(key);
-                    output.push('=');
-                    codec::encode(value, output, common::reserved());
-                }),
-                _ => value.iter().for_each(|(key, value)| {
-                    output.push_str(key);
-                    output.push(FRAGMENT_INFIX);
-                    codec::encode(value, output, common::reserved());
-                }),
-            },
+            Value::Item(value) => self.expand(output, value, var_spec),
+            Value::List(value) => self.expand(output, value, var_spec),
+            Value::AssociativeArray(value) => self.expand(output, value, var_spec),
         }
     }
 }
 
 impl Expand<String, VarSpec> for Fragment {
-    fn expand(&self, output: &mut String, value: &String, context: &VarSpec) {
+    fn expand(&self, output: &mut String, value: &String, var_spec: &VarSpec) {
         let len = value.len();
-        let len = match context.1 {
+        let len = match var_spec.1 {
             Some(Modifier::Prefix(Prefix(max_len))) if len > max_len => max_len,
             _ => len,
         };
 
         codec::encode(&value[..len], output, common::reserved());
+    }
+}
+
+impl Expand<Vec<String>, VarSpec> for Fragment {
+    fn expand(&self, output: &mut String, values: &Vec<String>, _var_spec: &VarSpec) {
+        let mut values = values.iter().peekable();
+
+        while let Some(value) = values.next() {
+            codec::encode(value, output, common::reserved());
+
+            if values.peek().is_some() {
+                output.push(INFIX);
+            }
+        }
+    }
+}
+
+impl Expand<HashMap<String, String>, VarSpec> for Fragment {
+    fn expand(&self, output: &mut String, values: &HashMap<String, String>, var_spec: &VarSpec) {
+        let mut values = values.iter().peekable();
+
+        let infix = match var_spec.1 {
+            Some(Modifier::Explode(_)) => '=',
+            _ => ',',
+        };
+
+        while let Some((key, value)) = values.next() {
+            codec::encode(key, output, common::reserved());
+            output.push(infix);
+            codec::encode(value, output, common::reserved());
+
+            if values.peek().is_some() {
+                output.push(',');
+            }
+        }
     }
 }

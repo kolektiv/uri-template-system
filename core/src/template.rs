@@ -58,18 +58,18 @@ impl Template {
 // Expansion
 
 impl Expand<Values, ()> for Template {
-    fn expand(&self, output: &mut String, value: &Values, context: &()) {
+    fn expand(&self, output: &mut String, values: &Values, context: &()) {
         self.0
             .iter()
-            .for_each(|component| component.expand(output, value, context));
+            .for_each(|component| component.expand(output, values, context));
     }
 }
 
 impl Expand<Values, ()> for Component {
-    fn expand(&self, output: &mut String, value: &Values, context: &()) {
+    fn expand(&self, output: &mut String, values: &Values, context: &()) {
         match self {
-            Component::Expression(expression) => expression.expand(output, value, context),
-            Component::Literal(literal) => literal.expand(output, value, context),
+            Component::Expression(expression) => expression.expand(output, values, context),
+            Component::Literal(literal) => literal.expand(output, values, context),
         }
     }
 }

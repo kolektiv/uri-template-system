@@ -4,9 +4,6 @@ mod encode;
 // Codec
 // =============================================================================
 
-// Re-Export
+// Re-Exports
 
-pub use self::encode::{
-    encode,
-    Encoding,
-};
+pub use self::encode::*;

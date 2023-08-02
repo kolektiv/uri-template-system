@@ -14,16 +14,12 @@ use nom_supreme::ParserExt;
 use crate::{
     template::{
         common,
-        expression::{
-            modifier::Modifier,
-            operator::Operator,
-        },
+        expression::modifier::Modifier,
     },
     value::{
         Value,
         Values,
     },
-    Expand,
 };
 
 // =============================================================================
@@ -93,32 +89,12 @@ fn varchar(input: &str) -> IResult<&str, &str> {
 
 // Expansion
 
-impl VarSpec {
-    pub fn defined<'a>(
-        variable_list: &'a Vec<VarSpec>,
-        values: &'a Values,
-    ) -> Peekable<impl Iterator<Item = (&'a Value, &'a VarSpec)> + 'a> {
-        variable_list
-            .iter()
-            .filter_map(|var_spec| values.get(&var_spec.0).map(|value| (value, var_spec)))
-            .peekable()
-    }
-}
-
-impl Expand<Values, Option<Operator>> for Vec<VarSpec> {
-    fn expand(&self, output: &mut String, value: &Values, context: &Option<Operator>) {
-        context.expand(output, value, self);
-    }
-}
-
-impl Expand<Value, Option<Operator>> for VarSpec {
-    fn expand(&self, output: &mut String, value: &Value, context: &Option<Operator>) {
-        context.expand(output, value, self);
-    }
-}
-
-impl Expand<String, Option<Operator>> for VarSpec {
-    fn expand(&self, output: &mut String, value: &String, context: &Option<Operator>) {
-        context.expand(output, value, self);
-    }
+pub fn defined<'a>(
+    var_specs: &'a Vec<VarSpec>,
+    values: &'a Values,
+) -> Peekable<impl Iterator<Item = (&'a Value, &'a VarSpec)> + 'a> {
+    var_specs
+        .iter()
+        .filter_map(|var_spec| values.get(&var_spec.0).map(|value| (value, var_spec)))
+        .peekable()
 }

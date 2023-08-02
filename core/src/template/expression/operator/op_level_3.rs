@@ -12,10 +12,7 @@ use nom::{
 
 use crate::{
     template::VarSpec,
-    value::{
-        Value,
-        Values,
-    },
+    value::Values,
     Expand,
 };
 
@@ -56,42 +53,13 @@ impl OpLevel3 {
 // Expansion
 
 impl Expand<Values, Vec<VarSpec>> for OpLevel3 {
-    fn expand(&self, output: &mut String, value: &Values, context: &Vec<VarSpec>) {
+    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
         match self {
-            Self::Label(operator) => operator.expand(output, value, context),
-            Self::Path(operator) => operator.expand(output, value, context),
-            _ => todo!()
-            // Self::PathParameter(operator) => operator.expand(output, value, context),
-            // Self::Query(operator) => operator.expand(output, value, context),
-            // Self::QueryContinuation(operator) => operator.expand(output, value, context),
-        }
-    }
-}
-
-impl Expand<Value, VarSpec> for OpLevel3 {
-    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
-        match self {
-            Self::Label(operator) => operator.expand(output, value, context),
-            Self::Path(operator) => operator.expand(output, value, context),
-            _ => todo!()
-            // Self::Path(operator) => operator.expand(output, value, context),
-            // Self::PathParameter(operator) => operator.expand(output, value, context),
-            // Self::Query(operator) => operator.expand(output, value, context),
-            // Self::QueryContinuation(operator) => operator.expand(output, value, context),
-        }
-    }
-}
-
-impl Expand<String, VarSpec> for OpLevel3 {
-    fn expand(&self, output: &mut String, value: &String, context: &VarSpec) {
-        match self {
-            Self::Label(operator) => operator.expand(output, value, context),
-            Self::Path(operator) => operator.expand(output, value, context),
-            _ => todo!()
-            // Self::Path(operator) => operator.expand(output, value, context),
-            // Self::PathParameter(operator) => operator.expand(output, value, context),
-            // Self::Query(operator) => operator.expand(output, value, context),
-            // Self::QueryContinuation(operator) => operator.expand(output, value, context),
+            Self::Label(operator) => operator.expand(output, values, var_specs),
+            Self::Path(operator) => operator.expand(output, values, var_specs),
+            Self::PathParameter(operator) => operator.expand(output, values, var_specs),
+            Self::Query(operator) => operator.expand(output, values, var_specs),
+            Self::QueryContinuation(operator) => operator.expand(output, values, var_specs),
         }
     }
 }

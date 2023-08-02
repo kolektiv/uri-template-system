@@ -105,7 +105,7 @@ fn default_level() -> u8 {
 
 const FILES: &[&str] = &[
     "spec-examples.json",
-    // "spec-examples-by-section.json",
+    "spec-examples-by-section.json",
     // "extended-tests.json",
     // "negative-tests.json",
 ];

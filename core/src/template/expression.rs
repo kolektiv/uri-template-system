@@ -54,8 +54,8 @@ impl Expression {
 // Expansion
 
 impl Expand<Values, ()> for Expression {
-    fn expand(&self, output: &mut String, value: &Values, _: &()) {
-        self.1.expand(output, value, &self.0);
+    fn expand(&self, output: &mut String, values: &Values, _: &()) {
+        self.1.expand(output, values, &self.0);
     }
 }
 

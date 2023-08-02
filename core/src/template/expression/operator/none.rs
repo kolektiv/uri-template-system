@@ -1,12 +1,5 @@
 use std::collections::HashMap;
 
-use nom::{
-    character::complete as character,
-    IResult,
-    Parser,
-};
-use nom_supreme::ParserExt;
-
 use crate::{
     codec,
     template::{
@@ -23,45 +16,36 @@ use crate::{
     Expand,
 };
 
+// =============================================================================
+// Simple
+// =============================================================================
+
+// Types
+
 #[derive(Clone, Debug, PartialEq)]
-pub struct Label;
-
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl Label {
-    pub fn parse(input: &str) -> IResult<&str, Label> {
-        character::char('.').value(Label).parse(input)
-    }
-}
+pub struct None;
 
 // -----------------------------------------------------------------------------
 
 // Expansion
 
-const PREFIX: char = '.';
-const SEPARATOR: char = '.';
+const INFIX: char = ',';
 
-impl Expand<Values, Vec<VarSpec>> for Label {
+impl Expand<Values, Vec<VarSpec>> for None {
     fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
         let mut values = var_spec::defined(var_specs, values);
-
-        if values.peek().is_some() {
-            output.push(PREFIX);
-        }
 
         while let Some((value, var_spec)) = values.next() {
             self.expand(output, value, var_spec);
 
             if values.peek().is_some() {
-                output.push(SEPARATOR);
+                output.push(INFIX);
             }
         }
     }
 }
 
-impl Expand<Value, VarSpec> for Label {
+impl Expand<Value, VarSpec> for None {
     fn expand(&self, output: &mut String, value: &Value, var_spec: &VarSpec) {
         match value {
             Value::Item(value) => self.expand(output, value, var_spec),
@@ -71,7 +55,7 @@ impl Expand<Value, VarSpec> for Label {
     }
 }
 
-impl Expand<String, VarSpec> for Label {
+impl Expand<String, VarSpec> for None {
     fn expand(&self, output: &mut String, value: &String, var_spec: &VarSpec) {
         let len = value.len();
         let len = match var_spec.1 {
@@ -83,32 +67,27 @@ impl Expand<String, VarSpec> for Label {
     }
 }
 
-impl Expand<Vec<String>, VarSpec> for Label {
-    fn expand(&self, output: &mut String, values: &Vec<String>, var_spec: &VarSpec) {
+impl Expand<Vec<String>, VarSpec> for None {
+    fn expand(&self, output: &mut String, values: &Vec<String>, _var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
-        let separator = match var_spec.1 {
-            Some(Modifier::Explode(_)) => SEPARATOR,
-            _ => ',',
-        };
-
         while let Some(value) = values.next() {
-            codec::encode(value, output, common::reserved());
+            codec::encode(value, output, common::unreserved());
 
             if values.peek().is_some() {
-                output.push(separator);
+                output.push(',');
             }
         }
     }
 }
 
-impl Expand<HashMap<String, String>, VarSpec> for Label {
+impl Expand<HashMap<String, String>, VarSpec> for None {
     fn expand(&self, output: &mut String, values: &HashMap<String, String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
-        let (infix, separator) = match var_spec.1 {
-            Some(Modifier::Explode(_)) => ('=', SEPARATOR),
-            _ => (',', ','),
+        let infix = match var_spec.1 {
+            Some(Modifier::Explode(_)) => '=',
+            _ => ',',
         };
 
         while let Some((key, value)) = values.next() {
@@ -117,7 +96,7 @@ impl Expand<HashMap<String, String>, VarSpec> for Label {
             codec::encode(value, output, common::unreserved());
 
             if values.peek().is_some() {
-                output.push(separator);
+                output.push(',');
             }
         }
     }

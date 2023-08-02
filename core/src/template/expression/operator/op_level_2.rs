@@ -9,10 +9,7 @@ use nom::{
 
 use crate::{
     template::VarSpec,
-    value::{
-        Value,
-        Values,
-    },
+    value::Values,
     Expand,
 };
 
@@ -47,28 +44,10 @@ impl OpLevel2 {
 // Expansion
 
 impl Expand<Values, Vec<VarSpec>> for OpLevel2 {
-    fn expand(&self, output: &mut String, value: &Values, context: &Vec<VarSpec>) {
+    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
         match self {
-            Self::Fragment(operator) => operator.expand(output, value, context),
-            Self::Reserved(operator) => operator.expand(output, value, context),
-        }
-    }
-}
-
-impl Expand<Value, VarSpec> for OpLevel2 {
-    fn expand(&self, output: &mut String, value: &Value, context: &VarSpec) {
-        match self {
-            Self::Fragment(operator) => operator.expand(output, value, context),
-            Self::Reserved(operator) => operator.expand(output, value, context),
-        }
-    }
-}
-
-impl Expand<String, VarSpec> for OpLevel2 {
-    fn expand(&self, output: &mut String, value: &String, context: &VarSpec) {
-        match self {
-            Self::Fragment(operator) => operator.expand(output, value, context),
-            Self::Reserved(operator) => operator.expand(output, value, context),
+            Self::Fragment(operator) => operator.expand(output, values, var_specs),
+            Self::Reserved(operator) => operator.expand(output, values, var_specs),
         }
     }
 }

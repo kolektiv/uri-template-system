@@ -40,7 +40,9 @@ impl URITemplate {
 
     pub fn expand(&self, values: &Values) -> String {
         let mut output = String::new();
-        let _ = self.template.expand(&mut output, values, &());
+        let values = values.defined();
+
+        self.template.expand(&mut output, &values, &());
 
         output
     }

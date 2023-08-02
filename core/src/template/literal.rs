@@ -7,6 +7,7 @@ use nom::{
 use nom_supreme::ParserExt;
 
 use crate::{
+    codec,
     template::common,
     value::Values,
     Expand,
@@ -22,7 +23,6 @@ use crate::{
 pub struct Literal(String);
 
 impl Literal {
-    #[allow(dead_code)]
     fn new(literal: impl Into<String>) -> Self {
         Self(literal.into())
     }
@@ -40,7 +40,7 @@ impl Literal {
                 .or(common::percent_encoded),
         )
         .map(|output| output.concat())
-        .map(Literal)
+        .map(Literal::new)
         .parse(input)
     }
 }
@@ -111,16 +111,7 @@ fn is_literal(c: char) -> bool {
 // Expansion
 
 impl Expand<Values, ()> for Literal {
-    // TODO: Percentage-Encoding/Validation
-    fn expand(&self, output: &mut String, _value: &Values, _context: &()) {
-        output.push_str(&self.0);
+    fn expand(&self, output: &mut String, _values: &Values, _context: &()) {
+        codec::encode(&self.0, output, common::reserved());
     }
 }
-
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-
-// Re-Export
-
-// pub use self::parse::literal as parse;
