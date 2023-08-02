@@ -22,7 +22,7 @@ use uri_template_system_core as core;
 // cases published at https://github.com/uri-templates/uritemplate-test, and
 // included as a submodule in this repository (./official).
 
-static ROOT_PATH: &str = "tests/cases/process/";
+static ROOT_PATH: &str = "tests/official";
 
 #[test]
 fn spec_examples() {
