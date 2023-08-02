@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::OpenOptions,
     io::BufReader,
     path::Path,
@@ -74,7 +73,7 @@ struct Cases {
     #[serde(default = "default_level")]
     level: u8,
     #[serde(rename = "variables")]
-    values: HashMap<String, Value>,
+    values: IndexMap<String, Value>,
     #[serde(rename = "testcases")]
     cases: Vec<(String, Expansion)>,
 }
