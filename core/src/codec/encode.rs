@@ -71,6 +71,7 @@ impl Buffer {
 // Functions
 
 pub fn encode(input: &str, output: &mut String, encoding: &Encoding) {
+    println!("encoding: '{input}'");
     push_str(input, output, encoding);
 }
 
@@ -136,10 +137,11 @@ fn is_percent(c: char) -> bool {
 
 // Lookups
 
-static ENCODED: OnceLock<[[char; 3]; 128]> = OnceLock::new();
+static ENCODED: OnceLock<[[char; 3]; 256]> = OnceLock::new();
 
-fn init_encoded() -> [[char; 3]; 128] {
-    Vec::from_iter('0'..='7')
+fn init_encoded() -> [[char; 3]; 256] {
+    [Vec::from_iter('0'..='9'), Vec::from_iter('A'..='F')]
+        .concat()
         .iter()
         .map(|a| {
             [Vec::from_iter('0'..='9'), Vec::from_iter('A'..='F')]
