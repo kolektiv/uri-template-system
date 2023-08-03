@@ -1,12 +1,14 @@
 [workspace]
-members = ["core"]
+members = ["core", "fixtures"]
 
 [workspace.dependencies]
 anyhow = "1"
+criterion = "0.5"
 indexmap = { version = "2", features = ["serde"] }
 nom = "7"
 nom-supreme = "0.8"
 serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "1"
 
 [workspace.package]

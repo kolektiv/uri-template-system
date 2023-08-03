@@ -1,5 +1,5 @@
 [package]
-name = "uri-template-system-core"
+name = "uri-template-system-fixtures"
 authors.workspace = true
 categories.workspace = true
 documentation.workspace = true
@@ -12,15 +12,5 @@ version.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 indexmap = { workspace = true }
-nom = { workspace = true }
-nom-supreme = { workspace = true }
-
-[dev-dependencies]
-criterion = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-uri-template-system-fixtures = { path = "../fixtures" }
-
-[[bench]]
-name = "optimisation"
-harness = false
