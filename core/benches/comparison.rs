@@ -77,6 +77,21 @@ fn compare(c: &mut Criterion, name: &str, groups: Vec<Group>) {
                 }
             })
         });
+
+        g.bench_function(BenchmarkId::new("IRI String", &group.name), |b| {
+            b.iter(|| {
+                for case in &group.cases {
+                    let template = &case.template;
+                    let variables = group.variables.clone();
+                    let actual = iri_string::expand(template, variables);
+
+                    match &case.expansion {
+                        Expansion::Single(expected) => assert!(expected == &actual),
+                        Expansion::Multiple(expected) => assert!(expected.contains(&actual)),
+                    };
+                }
+            })
+        });
     }
 
     g.finish();
@@ -126,6 +141,42 @@ mod uritemplate_next {
         });
 
         template.build()
+    }
+}
+
+mod iri_string {
+    use iri_string::{
+        spec::UriSpec,
+        template::{
+            simple_context::{
+                SimpleContext,
+                Value,
+            },
+            UriTemplateStr,
+        },
+    };
+    use uri_template_system_fixtures::Variable;
+
+    pub fn expand(template: &str, variables: Vec<(String, Variable)>) -> String {
+        UriTemplateStr::new(template)
+            .unwrap()
+            .expand::<UriSpec, _>(&to_context(variables))
+            .unwrap()
+            .to_string()
+    }
+
+    fn to_context(variables: Vec<(String, Variable)>) -> SimpleContext {
+        let mut context = SimpleContext::new();
+
+        variables.into_iter().for_each(|(n, v)| {
+            match v {
+                Variable::AssociativeArray(v) => context.insert(n, Value::Assoc(v)),
+                Variable::Item(v) => context.insert(n, Value::String(v)),
+                Variable::List(v) => context.insert(n, Value::List(v)),
+            };
+        });
+
+        context
     }
 }
 

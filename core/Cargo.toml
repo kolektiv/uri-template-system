@@ -17,6 +17,7 @@ nom-supreme = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+iri-string = "0.7"
 serde = { workspace = true }
 serde_json = { workspace = true }
 uri-template-system-fixtures = { path = "../fixtures" }
