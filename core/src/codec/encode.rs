@@ -144,11 +144,11 @@ fn buffer(
     }
 }
 
-fn complete(state: &State, output: &mut String, input: char) {
+fn complete(state: &State, output: &mut String, c: char) {
     if let State::HexDigit(hex_digit) = state {
         encode_char_utf8(output, '%');
         encode_char_utf8(output, *hex_digit);
-        encode_char_utf8(output, input);
+        encode_char_utf8(output, c);
     }
 }
 

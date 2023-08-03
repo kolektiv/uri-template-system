@@ -20,6 +20,11 @@ criterion = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uri-template-system-fixtures = { path = "../fixtures" }
+uritemplate-next = "0.2"
+
+[[bench]]
+name = "comparison"
+harness = false
 
 [[bench]]
 name = "optimisation"

@@ -6,13 +6,13 @@ use criterion::{
     criterion_main,
     Criterion,
 };
+use indexmap::IndexMap;
 use uri_template_system_core::{
     URITemplate,
     Value,
     Values,
 };
 use uri_template_system_fixtures::{
-    Case,
     Expansion,
     Group,
     Variable,
@@ -22,71 +22,69 @@ use uri_template_system_fixtures::{
 // Optimisation
 // =============================================================================
 
+// Benchmarks
+
 static FIXTURES_DATA: &str = "../fixtures/data";
 
-fn spec_examples(criterion: &mut Criterion) {
+fn spec_examples(c: &mut Criterion) {
     let path = PathBuf::from(FIXTURES_DATA).join("spec-examples.json");
     let groups = uri_template_system_fixtures::load(path);
 
-    benchmark(criterion, groups);
+    measure(c, groups);
 }
 
-fn spec_examples_by_section(criterion: &mut Criterion) {
+fn spec_examples_by_section(c: &mut Criterion) {
     let path = PathBuf::from(FIXTURES_DATA).join("spec-examples-by-section.json");
     let groups = uri_template_system_fixtures::load(path);
 
-    benchmark(criterion, groups);
+    measure(c, groups);
 }
 
-fn extended_tests(criterion: &mut Criterion) {
+fn extended_tests(c: &mut Criterion) {
     let path = PathBuf::from(FIXTURES_DATA).join("extended-tests.json");
     let groups = uri_template_system_fixtures::load(path);
 
-    benchmark(criterion, groups);
+    measure(c, groups);
 }
 
-fn benchmark(criterion: &mut Criterion, groups: Vec<Group>) {
-    for Group {
-        name,
-        variables,
-        cases,
-    } in groups
-    {
-        let values = Values::from_iter(
-            variables
-                .into_iter()
-                .filter_map(|(name, variable)| match variable {
-                    Variable::AssociativeArray(value) => {
-                        Some((name, Value::AssociativeArray(value)))
-                    }
-                    Variable::Item(value) => Some((name, Value::Item(value))),
-                    Variable::List(value) => Some((name, Value::List(value))),
-                    Variable::Number(value) => Some((name, Value::Item(value.to_string()))),
-                    Variable::Undefined => None,
-                })
-                .collect::<Vec<_>>(),
-        );
+// -----------------------------------------------------------------------------
 
-        criterion.bench_function(&name, |bencher| {
-            bencher.iter(|| {
-                for Case {
-                    expansion,
-                    template,
-                } in &cases
-                {
-                    let actual = URITemplate::parse(black_box(template))
+// Measurement
+
+fn measure(c: &mut Criterion, groups: Vec<Group>) {
+    for group in groups {
+        let values = to_values(group.variables);
+
+        c.bench_function(&group.name, |b| {
+            b.iter(|| {
+                for case in &group.cases {
+                    let actual = URITemplate::parse(black_box(&case.template))
                         .unwrap()
                         .expand(black_box(&values));
 
-                    match expansion {
-                        Expansion::String(expected) => assert!(expected == &actual),
-                        Expansion::List(expected) => assert!(expected.contains(&actual)),
+                    match &case.expansion {
+                        Expansion::Single(expected) => assert!(expected == &actual),
+                        Expansion::Multiple(expected) => assert!(expected.contains(&actual)),
                     };
                 }
             })
         });
     }
 }
+
+fn to_values(variables: Vec<(String, Variable)>) -> Values {
+    Values::from_iter(variables.into_iter().map(to_value))
+}
+
+fn to_value((n, v): (String, Variable)) -> (String, Value) {
+    match v {
+        Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
+        Variable::Item(v) => (n, Value::Item(v)),
+        Variable::List(v) => (n, Value::List(v)),
+    }
+}
+
+// -----------------------------------------------------------------------------
 
 // Groups
 
@@ -96,6 +94,8 @@ criterion_group!(
     spec_examples_by_section,
     extended_tests
 );
+
+// -----------------------------------------------------------------------------
 
 // Main
 

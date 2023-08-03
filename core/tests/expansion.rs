@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
+use indexmap::IndexMap;
 use uri_template_system_core::{
     URITemplate,
     Value,
     Values,
 };
 use uri_template_system_fixtures::{
-    Case,
     Expansion,
     Group,
     Variable,
@@ -15,6 +15,8 @@ use uri_template_system_fixtures::{
 // =============================================================================
 // Expansion
 // =============================================================================
+
+// Tests
 
 // Testcases for URI Template processing are generated from the "official" test
 // cases published at https://github.com/uri-templates/uritemplate-test, and
@@ -52,47 +54,31 @@ fn extended_tests() {
     }
 }
 
-fn test(
-    Group {
-        name,
-        variables,
-        cases,
-    }: Group,
-) {
-    let values = Values::from_iter(
-        variables
-            .into_iter()
-            .filter_map(|(name, variable)| match variable {
-                Variable::AssociativeArray(value) => Some((name, Value::AssociativeArray(value))),
-                Variable::Item(value) => Some((name, Value::Item(value))),
-                Variable::List(value) => Some((name, Value::List(value))),
-                Variable::Number(value) => Some((name, Value::Item(value.to_string()))),
-                Variable::Undefined => None,
-            })
-            .collect::<Vec<_>>(),
-    );
+// -----------------------------------------------------------------------------
 
-    for (
-        i,
-        Case {
-            expansion,
-            template,
-        },
-    ) in cases.iter().enumerate()
-    {
+// Test
+
+fn test(group: Group) {
+    let name = &group.name;
+    let values = to_values(group.variables);
+
+    for (i, case) in group.cases.iter().enumerate() {
+        let expansion = &case.expansion;
+        let template = &case.template;
+
         let actual = URITemplate::parse(template)
             .expect(&format!("{name} - {i}: Template Parse Error ({template})"))
             .expand(&values);
 
         match expansion {
-            Expansion::List(expected) => {
+            Expansion::Multiple(expected) => {
                 assert!(
                     expected.contains(&actual),
                     "{name} - {i}: Actual expansion \"{actual}\" not found in expected expansions \
                      {expected:#?}.\nTemplate: \"{template}\"\nValues: {values:#?}"
                 )
             }
-            Expansion::String(expected) => {
+            Expansion::Single(expected) => {
                 assert!(
                     expected.eq(&actual),
                     "{name} - {i}: Actual expansion \"{actual}\" not equal to expected expansion \
@@ -100,5 +86,17 @@ fn test(
                 )
             }
         }
+    }
+}
+
+fn to_values(variables: Vec<(String, Variable)>) -> Values {
+    Values::from_iter(variables.into_iter().map(to_value))
+}
+
+fn to_value((n, v): (String, Variable)) -> (String, Value) {
+    match v {
+        Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
+        Variable::Item(v) => (n, Value::Item(v)),
+        Variable::List(v) => (n, Value::List(v)),
     }
 }
