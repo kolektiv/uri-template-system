@@ -1,124 +1,90 @@
-use std::{
-    fs::OpenOptions,
-    io::BufReader,
-    path::{
-        Path,
-        PathBuf,
-    },
-};
+use std::path::PathBuf;
 
-use anyhow::Result;
-use indexmap::IndexMap;
-use serde::Deserialize;
-use uri_template_system_core as core;
+use uri_template_system_core::{
+    URITemplate,
+    Value,
+    Values,
+};
+use uri_template_system_fixtures::{
+    Case,
+    Expansion,
+    Group,
+    Variable,
+};
 
 // =============================================================================
 // Expansion
 // =============================================================================
 
-// Tests
-
 // Testcases for URI Template processing are generated from the "official" test
 // cases published at https://github.com/uri-templates/uritemplate-test, and
 // included as a submodule in this repository (./official).
 
-static ROOT_PATH: &str = "tests/official";
+static FIXTURES_DATA: &str = "../fixtures/data";
 
 #[test]
 fn spec_examples() {
-    let path = PathBuf::from(ROOT_PATH).join("spec-examples.json");
-    let cases = read_cases(path).expect("failed to read test file");
+    let path = PathBuf::from(FIXTURES_DATA).join("spec-examples.json");
+    let groups = uri_template_system_fixtures::load(path).expect("fixtures error");
 
-    for (name, cases) in cases {
-        assert_tests(name, cases.tests, convert_values(cases.values));
+    for group in groups {
+        assert_group(group);
     }
 }
 
 #[test]
 fn spec_examples_by_section() {
-    let path = PathBuf::from(ROOT_PATH).join("spec-examples-by-section.json");
-    let cases = read_cases(path).expect("failed to read test file");
+    let path = PathBuf::from(FIXTURES_DATA).join("spec-examples-by-section.json");
+    let groups = uri_template_system_fixtures::load(path).expect("fixtures error");
 
-    for (name, cases) in cases {
-        assert_tests(name, cases.tests, convert_values(cases.values));
+    for group in groups {
+        assert_group(group);
     }
 }
 
 #[test]
 fn extended_tests() {
-    let path = PathBuf::from(ROOT_PATH).join("extended-tests.json");
-    let cases = read_cases(path).expect("failed to read test file");
+    let path = PathBuf::from(FIXTURES_DATA).join("extended-tests.json");
+    let groups = uri_template_system_fixtures::load(path).expect("fixtures error");
 
-    for (name, cases) in cases {
-        assert_tests(name, cases.tests, convert_values(cases.values));
+    for group in groups {
+        assert_group(group);
     }
 }
 
-// =============================================================================
-// Harness
-// =============================================================================
-
-// Types
-
-#[derive(Debug, Deserialize)]
-struct Cases {
-    #[serde(rename = "variables")]
-    values: IndexMap<String, Value>,
-    #[serde(rename = "testcases")]
-    tests: Vec<(String, Expansion)>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum Value {
-    Item(String),
-    List(Vec<String>),
-    AssociativeArray(IndexMap<String, String>),
-    Number(f32),
-    Undefined,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum Expansion {
-    String(String),
-    List(Vec<String>),
-}
-
-// -----------------------------------------------------------------------------
-
-// Data
-
-fn read_cases(path: impl AsRef<Path>) -> Result<IndexMap<String, Cases>> {
-    let file = OpenOptions::new().read(true).open(path)?;
-    let reader = BufReader::new(file);
-    let sets = serde_json::from_reader(reader)?;
-
-    Ok(sets)
-}
-
-fn convert_values(values: IndexMap<String, Value>) -> core::Values {
-    core::Values::from_iter(
-        values
+fn assert_group(
+    Group {
+        name,
+        variables,
+        cases,
+    }: Group,
+) {
+    let values = Values::from_iter(
+        variables
             .into_iter()
-            .filter_map(|(n, v)| match v {
-                Value::AssociativeArray(v) => Some((n, core::Value::AssociativeArray(v))),
-                Value::Item(v) => Some((n, core::Value::Item(v))),
-                Value::List(v) => Some((n, core::Value::List(v))),
-                Value::Number(v) => Some((n, core::Value::Item(v.to_string()))),
-                Value::Undefined => None,
+            .filter_map(|(name, variable)| match variable {
+                Variable::AssociativeArray(value) => Some((name, Value::AssociativeArray(value))),
+                Variable::Item(value) => Some((name, Value::Item(value))),
+                Variable::List(value) => Some((name, Value::List(value))),
+                Variable::Number(value) => Some((name, Value::Item(value.to_string()))),
+                Variable::Undefined => None,
             })
             .collect::<Vec<_>>(),
-    )
-}
+    );
 
-fn assert_tests(name: String, cases: Vec<(String, Expansion)>, values: core::Values) {
-    for (i, (template, expected)) in cases.iter().enumerate() {
-        let actual = core::URITemplate::parse(template)
+    for (
+        i,
+        Case {
+            expansion,
+            template,
+        },
+    ) in cases.iter().enumerate()
+    {
+        let actual = URITemplate::parse(template)
             .expect(&format!("{name} - {i}: Template Parse Error ({template})"))
             .expand(&values);
 
-        match expected {
+        match expansion {
             Expansion::List(expected) => {
                 assert!(
                     expected.contains(&actual),

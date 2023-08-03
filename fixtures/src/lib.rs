@@ -1,10 +1,7 @@
 use std::{
     fs::OpenOptions,
     io::BufReader,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::Path,
 };
 
 use anyhow::Result;
@@ -57,10 +54,7 @@ pub enum Expansion {
 
 // Functions
 
-static ROOT: &str = "data";
-
 pub fn load(path: impl AsRef<Path>) -> Result<Vec<Group>> {
-    let path = PathBuf::from(ROOT).join(path);
     let file = OpenOptions::new().read(true).open(path)?;
     let reader = BufReader::new(file);
 
