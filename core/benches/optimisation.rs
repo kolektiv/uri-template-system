@@ -10,7 +10,7 @@ use uri_template_system_core::fibonacci;
 // Optimisation
 // =============================================================================
 
-// Benchmarks
+static FIXTURES_DATA: &str = "../fixtures/data";
 
 pub fn fibonacci_benchmark(c: &mut Criterion) {
     c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));

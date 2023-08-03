@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 
 use crate::{
-    codec,
+    codec::Encode,
     template::{
         common,
         expression::var_spec,
@@ -63,7 +63,7 @@ impl Expand<String, VarSpec> for None {
             _ => len,
         };
 
-        codec::encode(&value[..len], output, common::unreserved());
+        output.push_str_encode(&value[..len], common::unreserved());
     }
 }
 
@@ -72,7 +72,7 @@ impl Expand<Vec<String>, VarSpec> for None {
         let mut values = values.iter().peekable();
 
         while let Some(value) = values.next() {
-            codec::encode(value, output, common::unreserved());
+            output.push_str_encode(value, common::unreserved());
 
             if values.peek().is_some() {
                 output.push(',');
@@ -91,9 +91,9 @@ impl Expand<IndexMap<String, String>, VarSpec> for None {
         };
 
         while let Some((key, value)) = values.next() {
-            codec::encode(key, output, common::reserved());
+            output.push_str_encode(key, common::reserved());
             output.push(infix);
-            codec::encode(value, output, common::unreserved());
+            output.push_str_encode(value, common::unreserved());
 
             if values.peek().is_some() {
                 output.push(',');

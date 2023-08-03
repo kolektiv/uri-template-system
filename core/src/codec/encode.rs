@@ -4,6 +4,25 @@ use std::sync::OnceLock;
 // Encode
 // =============================================================================
 
+// Traits
+
+pub trait Encode {
+    fn push_encode(&mut self, ch: char, encoding: &Encoding);
+    fn push_str_encode(&mut self, string: &str, encoding: &Encoding);
+}
+
+impl Encode for String {
+    fn push_encode(&mut self, ch: char, encoding: &Encoding) {
+        encode_char(self, ch, encoding);
+    }
+
+    fn push_str_encode(&mut self, string: &str, encoding: &Encoding) {
+        encode_str(self, string, encoding);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
 // Types
 
 pub struct Encoding {
@@ -15,39 +34,39 @@ pub struct Encoding {
 
 // Encoding
 
-pub fn encode(input: &str, output: &mut String, encoding: &Encoding) {
-    encode_str(input, output, encoding);
-}
+// pub fn encode(input: &str, output: &mut String, encoding: &Encoding) {
+//     encode_str(output, input, encoding);
+// }
 
-fn encode_str(input: &str, output: &mut String, encoding: &Encoding) {
+fn encode_str(output: &mut String, input: &str, encoding: &Encoding) {
     let mut state = State::Empty;
 
     for input in input.chars() {
         if encoding.allow_encoded {
             if let Some(input) = buffer(&mut state, output, encoding, input) {
-                encode_char(input, output, encoding);
+                encode_char(output, input, encoding);
             }
         } else {
-            encode_char(input, output, encoding);
+            encode_char(output, input, encoding);
         }
     }
 
     flush(&state, output, encoding);
 }
 
-fn encode_char(input: char, output: &mut String, encoding: &Encoding) {
+fn encode_char(output: &mut String, input: char, encoding: &Encoding) {
     if (encoding.allow)(input) {
-        encode_char_utf8(input, output);
+        encode_char_utf8(output, input);
     } else {
-        encode_char_percent(input, output);
+        encode_char_percent(output, input);
     }
 }
 
-fn encode_char_utf8(input: char, output: &mut String) {
+fn encode_char_utf8(output: &mut String, input: char) {
     output.push(input);
 }
 
-fn encode_char_percent(input: char, output: &mut String) {
+fn encode_char_percent(output: &mut String, input: char) {
     input
         .encode_utf8(&mut [0; 4])
         .as_bytes()
@@ -127,20 +146,20 @@ fn buffer(
 
 fn complete(state: &State, output: &mut String, input: char) {
     if let State::HexDigit(hex_digit) = state {
-        encode_char_utf8('%', output);
-        encode_char_utf8(*hex_digit, output);
-        encode_char_utf8(input, output);
+        encode_char_utf8(output, '%');
+        encode_char_utf8(output, *hex_digit);
+        encode_char_utf8(output, input);
     }
 }
 
 fn flush(state: &State, output: &mut String, encoding: &Encoding) {
     match state {
         State::HexDigit(hex_digit) => {
-            encode_char('%', output, encoding);
-            encode_char(*hex_digit, output, encoding);
+            encode_char(output, '%', encoding);
+            encode_char(output, *hex_digit, encoding);
         }
         State::Percent => {
-            encode_char('%', output, encoding);
+            encode_char(output, '%', encoding);
         }
         _ => {}
     }

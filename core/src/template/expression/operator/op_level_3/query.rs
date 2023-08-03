@@ -7,7 +7,7 @@ use nom::{
 use nom_supreme::ParserExt;
 
 use crate::{
-    codec,
+    codec::Encode,
     template::{
         common,
         expression::var_spec,
@@ -78,9 +78,9 @@ impl Expand<String, VarSpec> for Query {
             _ => len,
         };
 
-        codec::encode(&var_spec.0, output, common::reserved());
+        output.push_str_encode(&var_spec.0, common::reserved());
         output.push('=');
-        codec::encode(&value[..len], output, common::unreserved());
+        output.push_str_encode(&value[..len], common::unreserved());
     }
 }
 
@@ -91,9 +91,9 @@ impl Expand<Vec<String>, VarSpec> for Query {
         match var_spec.1 {
             Some(Modifier::Explode(_)) => {
                 while let Some(value) = values.next() {
-                    codec::encode(&var_spec.0, output, common::reserved());
+                    output.push_str_encode(&var_spec.0, common::reserved());
                     output.push('=');
-                    codec::encode(value, output, common::unreserved());
+                    output.push_str_encode(value, common::unreserved());
 
                     if values.peek().is_some() {
                         output.push(SEPARATOR);
@@ -101,11 +101,11 @@ impl Expand<Vec<String>, VarSpec> for Query {
                 }
             }
             _ => {
-                codec::encode(&var_spec.0, output, common::reserved());
+                output.push_str_encode(&var_spec.0, common::reserved());
                 output.push('=');
 
                 while let Some(value) = values.next() {
-                    codec::encode(value, output, common::unreserved());
+                    output.push_str_encode(value, common::unreserved());
 
                     if values.peek().is_some() {
                         output.push(',');
@@ -123,9 +123,9 @@ impl Expand<IndexMap<String, String>, VarSpec> for Query {
         match var_spec.1 {
             Some(Modifier::Explode(_)) => {
                 while let Some((key, value)) = values.next() {
-                    codec::encode(key, output, common::reserved());
+                    output.push_str_encode(key, common::reserved());
                     output.push('=');
-                    codec::encode(value, output, common::unreserved());
+                    output.push_str_encode(value, common::unreserved());
 
                     if values.peek().is_some() {
                         output.push(SEPARATOR);
@@ -133,13 +133,13 @@ impl Expand<IndexMap<String, String>, VarSpec> for Query {
                 }
             }
             _ => {
-                codec::encode(&var_spec.0, output, common::reserved());
+                output.push_str_encode(&var_spec.0, common::reserved());
                 output.push('=');
 
                 while let Some((key, value)) = values.next() {
-                    codec::encode(key, output, common::reserved());
+                    output.push_str_encode(key, common::reserved());
                     output.push(',');
-                    codec::encode(value, output, common::unreserved());
+                    output.push_str_encode(value, common::unreserved());
 
                     if values.peek().is_some() {
                         output.push(',');

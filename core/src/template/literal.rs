@@ -7,7 +7,7 @@ use nom::{
 use nom_supreme::ParserExt;
 
 use crate::{
-    codec,
+    codec::Encode,
     template::common,
     value::Values,
     Expand,
@@ -112,6 +112,6 @@ fn is_literal(c: char) -> bool {
 
 impl Expand<Values, ()> for Literal {
     fn expand(&self, output: &mut String, _values: &Values, _context: &()) {
-        codec::encode(&self.0, output, common::reserved());
+        output.push_str_encode(&self.0, common::reserved());
     }
 }

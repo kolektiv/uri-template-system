@@ -7,7 +7,7 @@ use nom::{
 use nom_supreme::ParserExt;
 
 use crate::{
-    codec,
+    codec::Encode,
     template::{
         common,
         expression::var_spec,
@@ -78,7 +78,7 @@ impl Expand<String, VarSpec> for Path {
             _ => len,
         };
 
-        codec::encode(&value[..len], output, common::unreserved());
+        output.push_str_encode(&value[..len], common::unreserved());
     }
 }
 
@@ -92,7 +92,7 @@ impl Expand<Vec<String>, VarSpec> for Path {
         };
 
         while let Some(value) = values.next() {
-            codec::encode(value, output, common::reserved());
+            output.push_str_encode(value, common::reserved());
 
             if values.peek().is_some() {
                 output.push(infix);
@@ -111,9 +111,9 @@ impl Expand<IndexMap<String, String>, VarSpec> for Path {
         };
 
         while let Some((key, value)) = values.next() {
-            codec::encode(key, output, common::reserved());
+            output.push_str_encode(key, common::reserved());
             output.push(infix);
-            codec::encode(value, output, common::unreserved());
+            output.push_str_encode(value, common::unreserved());
 
             if values.peek().is_some() {
                 output.push(separator);

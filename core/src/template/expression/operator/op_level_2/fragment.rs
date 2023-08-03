@@ -7,7 +7,7 @@ use nom::{
 use nom_supreme::ParserExt;
 
 use crate::{
-    codec,
+    codec::Encode,
     template::{
         common,
         expression::var_spec,
@@ -84,7 +84,7 @@ impl Expand<String, VarSpec> for Fragment {
             _ => len,
         };
 
-        codec::encode(&value[..len], output, common::reserved());
+        output.push_str_encode(&value[..len], common::reserved());
     }
 }
 
@@ -93,7 +93,7 @@ impl Expand<Vec<String>, VarSpec> for Fragment {
         let mut values = values.iter().peekable();
 
         while let Some(value) = values.next() {
-            codec::encode(value, output, common::reserved());
+            output.push_str_encode(value, common::reserved());
 
             if values.peek().is_some() {
                 output.push(INFIX);
@@ -112,9 +112,9 @@ impl Expand<IndexMap<String, String>, VarSpec> for Fragment {
         };
 
         while let Some((key, value)) = values.next() {
-            codec::encode(key, output, common::reserved());
+            output.push_str_encode(key, common::reserved());
             output.push(infix);
-            codec::encode(value, output, common::reserved());
+            output.push_str_encode(value, common::reserved());
 
             if values.peek().is_some() {
                 output.push(',');
