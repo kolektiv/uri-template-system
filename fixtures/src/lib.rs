@@ -4,7 +4,6 @@ use std::{
     path::Path,
 };
 
-use anyhow::Result;
 use indexmap::IndexMap;
 use serde::Deserialize;
 
@@ -54,14 +53,17 @@ pub enum Expansion {
 
 // Functions
 
-pub fn load(path: impl AsRef<Path>) -> Result<Vec<Group>> {
-    let file = OpenOptions::new().read(true).open(path)?;
-    let reader = BufReader::new(file);
+pub fn load(path: impl AsRef<Path>) -> Vec<Group> {
+    let file = OpenOptions::new()
+        .read(true)
+        .open(path)
+        .expect("file open error");
 
-    let cases = serde_json::from_reader::<_, IndexMap<String, Cases>>(reader)?;
-    let groups = cases.into_iter().map(map_case).collect();
-
-    Ok(groups)
+    serde_json::from_reader::<_, IndexMap<String, Cases>>(BufReader::new(file))
+        .expect("deserialization error")
+        .into_iter()
+        .map(map_case)
+        .collect()
 }
 
 fn map_case((name, cases): (String, Cases)) -> Group {

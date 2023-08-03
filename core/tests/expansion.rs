@@ -25,34 +25,34 @@ static FIXTURES_DATA: &str = "../fixtures/data";
 #[test]
 fn spec_examples() {
     let path = PathBuf::from(FIXTURES_DATA).join("spec-examples.json");
-    let groups = uri_template_system_fixtures::load(path).expect("fixtures error");
+    let groups = uri_template_system_fixtures::load(path);
 
     for group in groups {
-        assert_group(group);
+        test(group);
     }
 }
 
 #[test]
 fn spec_examples_by_section() {
     let path = PathBuf::from(FIXTURES_DATA).join("spec-examples-by-section.json");
-    let groups = uri_template_system_fixtures::load(path).expect("fixtures error");
+    let groups = uri_template_system_fixtures::load(path);
 
     for group in groups {
-        assert_group(group);
+        test(group);
     }
 }
 
 #[test]
 fn extended_tests() {
     let path = PathBuf::from(FIXTURES_DATA).join("extended-tests.json");
-    let groups = uri_template_system_fixtures::load(path).expect("fixtures error");
+    let groups = uri_template_system_fixtures::load(path);
 
     for group in groups {
-        assert_group(group);
+        test(group);
     }
 }
 
-fn assert_group(
+fn test(
     Group {
         name,
         variables,
