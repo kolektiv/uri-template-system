@@ -90,7 +90,7 @@ fn varchar(input: &str) -> IResult<&str, &str> {
 // Expansion
 
 pub fn defined<'a>(
-    var_specs: &'a Vec<VarSpec>,
+    var_specs: &'a [VarSpec],
     values: &'a Values,
 ) -> Peekable<impl Iterator<Item = (&'a Value, &'a VarSpec)> + 'a> {
     var_specs

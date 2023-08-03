@@ -36,7 +36,7 @@ fn encode_str(input: &str, output: &mut String, encoding: &Encoding) {
 }
 
 fn encode_char(input: char, output: &mut String, encoding: &Encoding) {
-    if (&encoding.allow)(input) {
+    if (encoding.allow)(input) {
         encode_char_utf8(input, output);
     } else {
         encode_char_percent(input, output);
@@ -126,13 +126,10 @@ fn buffer(
 }
 
 fn complete(state: &State, output: &mut String, input: char) {
-    match state {
-        State::HexDigit(hex_digit) => {
-            encode_char_utf8('%', output);
-            encode_char_utf8(*hex_digit, output);
-            encode_char_utf8(input, output);
-        }
-        _ => {}
+    if let State::HexDigit(hex_digit) = state {
+        encode_char_utf8('%', output);
+        encode_char_utf8(*hex_digit, output);
+        encode_char_utf8(input, output);
     }
 }
 
@@ -159,14 +156,13 @@ fn percent_encoded() -> [[char; 3]; 256] {
     [Vec::from_iter('0'..='9'), Vec::from_iter('A'..='F')]
         .concat()
         .iter()
-        .map(|a| {
+        .flat_map(|a| {
             [Vec::from_iter('0'..='9'), Vec::from_iter('A'..='F')]
                 .concat()
                 .iter()
                 .map(|b| ['%', *a, *b])
                 .collect::<Vec<_>>()
         })
-        .flatten()
         .collect::<Vec<_>>()
         .try_into()
         .unwrap()

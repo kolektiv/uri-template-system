@@ -35,7 +35,7 @@ impl URITemplate {
             .map(|(_, template)| template)
             .map_err(|_| Error::msg("uri template parse failed"))?; // TODO: Proper Error
 
-        Ok(Self { template: template })
+        Ok(Self { template })
     }
 
     pub fn expand(&self, values: &Values) -> String {
