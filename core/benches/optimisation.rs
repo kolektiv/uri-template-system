@@ -1,21 +1,12 @@
-use std::path::PathBuf;
-
 use criterion::{
-    black_box,
     criterion_group,
     criterion_main,
+    BatchSize,
     Criterion,
 };
-use indexmap::IndexMap;
-use uri_template_system_core::{
-    URITemplate,
-    Value,
-    Values,
-};
 use uri_template_system_fixtures::{
-    Expansion,
+    self as fixtures,
     Group,
-    Variable,
 };
 
 // =============================================================================
@@ -24,79 +15,80 @@ use uri_template_system_fixtures::{
 
 // Benchmarks
 
-static FIXTURES_DATA: &str = "../fixtures/data";
-
-fn spec_examples(c: &mut Criterion) {
-    let path = PathBuf::from(FIXTURES_DATA).join("spec-examples.json");
-    let groups = uri_template_system_fixtures::load(path);
-
-    measure(c, groups);
+fn examples(c: &mut Criterion) {
+    measure(c, "Examples", fixtures::examples());
 }
 
-fn spec_examples_by_section(c: &mut Criterion) {
-    let path = PathBuf::from(FIXTURES_DATA).join("spec-examples-by-section.json");
-    let groups = uri_template_system_fixtures::load(path);
-
-    measure(c, groups);
+fn examples_by_section(c: &mut Criterion) {
+    measure(c, "Examples By Section", fixtures::examples_by_section());
 }
 
 fn extended_tests(c: &mut Criterion) {
-    let path = PathBuf::from(FIXTURES_DATA).join("extended-tests.json");
-    let groups = uri_template_system_fixtures::load(path);
-
-    measure(c, groups);
+    measure(c, "Extended Tests", fixtures::extended_tests());
 }
 
 // -----------------------------------------------------------------------------
 
 // Measurement
 
-fn measure(c: &mut Criterion, groups: Vec<Group>) {
+fn measure(c: &mut Criterion, name: &str, groups: Vec<Group>) {
     for group in groups {
-        let values = to_values(group.variables);
+        let values = uri_template_system::prepare(group.variables.clone());
 
-        c.bench_function(&group.name, |b| {
-            b.iter(|| {
-                for case in &group.cases {
-                    let actual = URITemplate::parse(black_box(&case.template))
-                        .unwrap()
-                        .expand(black_box(&values));
-
-                    match &case.expansion {
-                        Expansion::Single(expected) => assert!(expected == &actual),
-                        Expansion::Multiple(expected) => assert!(expected.contains(&actual)),
-                    };
-                }
-            })
+        c.bench_function(&format!("{}: {}", name, &group.name), |b| {
+            b.iter_batched_ref(
+                || setup(&group),
+                |(input, output): &mut (Vec<String>, Vec<String>)| {
+                    output.extend(
+                        input
+                            .iter()
+                            .map(|template| uri_template_system::test(&template, &values)),
+                    );
+                },
+                BatchSize::SmallInput,
+            )
         });
     }
 }
 
-fn to_values(variables: Vec<(String, Variable)>) -> Values {
-    Values::from_iter(variables.into_iter().map(to_value))
+fn setup(group: &Group) -> (Vec<String>, Vec<String>) {
+    (
+        group.cases.iter().map(|c| c.template.clone()).collect(),
+        Vec::with_capacity(group.cases.len()),
+    )
 }
 
-fn to_value((n, v): (String, Variable)) -> (String, Value) {
-    match v {
-        Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
-        Variable::Item(v) => (n, Value::Item(v)),
-        Variable::List(v) => (n, Value::List(v)),
+// =============================================================================
+// Implementations
+// =============================================================================
+
+// URI Template System
+
+mod uri_template_system {
+    use indexmap::IndexMap;
+    use uri_template_system_core::{
+        URITemplate,
+        Value,
+        Values,
+    };
+    use uri_template_system_fixtures::Variable;
+
+    pub fn prepare(variables: Vec<(String, Variable)>) -> Values {
+        Values::from_iter(variables.into_iter().map(|(n, v)| match v {
+            Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
+            Variable::Item(v) => (n, Value::Item(v)),
+            Variable::List(v) => (n, Value::List(v)),
+        }))
+    }
+
+    pub fn test(template: &str, values: &Values) -> String {
+        URITemplate::parse(template).unwrap().expand(values)
     }
 }
 
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Harness
+// =============================================================================
 
-// Groups
-
-criterion_group!(
-    optimisation,
-    spec_examples,
-    spec_examples_by_section,
-    extended_tests
-);
-
-// -----------------------------------------------------------------------------
-
-// Main
-
+criterion_group!(optimisation, examples, examples_by_section, extended_tests);
 criterion_main!(optimisation);

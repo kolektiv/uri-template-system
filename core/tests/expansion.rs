@@ -1,15 +1,7 @@
-use std::path::PathBuf;
-
-use indexmap::IndexMap;
-use uri_template_system_core::{
-    URITemplate,
-    Value,
-    Values,
-};
 use uri_template_system_fixtures::{
+    self as fixtures,
     Expansion,
     Group,
-    Variable,
 };
 
 // =============================================================================
@@ -22,81 +14,79 @@ use uri_template_system_fixtures::{
 // cases published at https://github.com/uri-templates/uritemplate-test, and
 // included as a submodule in this repository (./official).
 
-static FIXTURES_DATA: &str = "../fixtures/data";
-
 #[test]
-fn spec_examples() {
-    let path = PathBuf::from(FIXTURES_DATA).join("spec-examples.json");
-    let groups = uri_template_system_fixtures::load(path);
-
-    for group in groups {
-        test(group);
-    }
+fn examples() {
+    test("Examples", fixtures::examples());
 }
 
 #[test]
-fn spec_examples_by_section() {
-    let path = PathBuf::from(FIXTURES_DATA).join("spec-examples-by-section.json");
-    let groups = uri_template_system_fixtures::load(path);
-
-    for group in groups {
-        test(group);
-    }
+fn examples_by_section() {
+    test("Examples By Section", fixtures::examples_by_section());
 }
 
 #[test]
 fn extended_tests() {
-    let path = PathBuf::from(FIXTURES_DATA).join("extended-tests.json");
-    let groups = uri_template_system_fixtures::load(path);
-
-    for group in groups {
-        test(group);
-    }
+    test("Extended Tests", fixtures::extended_tests());
 }
 
 // -----------------------------------------------------------------------------
 
 // Test
 
-fn test(group: Group) {
-    let name = &group.name;
-    let values = to_values(group.variables);
+fn test(name: &str, groups: Vec<Group>) {
+    for group in groups {
+        let name = format!("{name}: {}", &group.name);
+        let values = uri_template_system::prepare(group.variables);
 
-    for (i, case) in group.cases.iter().enumerate() {
-        let expansion = &case.expansion;
-        let template = &case.template;
+        for (i, case) in group.cases.iter().enumerate() {
+            let expansion = &case.expansion;
+            let template = &case.template;
+            let actual = uri_template_system::test(template, &values);
 
-        let actual = URITemplate::parse(template)
-            .expect(&format!("{name} - {i}: Template Parse Error ({template})"))
-            .expand(&values);
-
-        match expansion {
-            Expansion::Multiple(expected) => {
-                assert!(
-                    expected.contains(&actual),
-                    "{name} - {i}: Actual expansion \"{actual}\" not found in expected expansions \
-                     {expected:#?}.\nTemplate: \"{template}\"\nValues: {values:#?}"
-                )
-            }
-            Expansion::Single(expected) => {
-                assert!(
-                    expected.eq(&actual),
-                    "{name} - {i}: Actual expansion \"{actual}\" not equal to expected expansion \
-                     \"{expected}\".\nTemplate: \"{template}\"\nValues: {values:#?}"
-                )
+            match expansion {
+                Expansion::Multiple(expected) => {
+                    assert!(
+                        expected.contains(&actual),
+                        "{name} - {i}: Actual expansion \"{actual}\" not found in expected \
+                         expansions {expected:#?}.\nTemplate:\"{template}\"\nValues: {values:#?}"
+                    )
+                }
+                Expansion::Single(expected) => {
+                    assert!(
+                        expected.eq(&actual),
+                        "{name} - {i}: Actual expansion \"{actual}\" not equal to expected \
+                         expansion \"{expected}\".\nTemplate:\"{template}\"\nValues: {values:#?}"
+                    )
+                }
             }
         }
     }
 }
 
-fn to_values(variables: Vec<(String, Variable)>) -> Values {
-    Values::from_iter(variables.into_iter().map(to_value))
-}
+// =============================================================================
+// Implementations
+// =============================================================================
 
-fn to_value((n, v): (String, Variable)) -> (String, Value) {
-    match v {
-        Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
-        Variable::Item(v) => (n, Value::Item(v)),
-        Variable::List(v) => (n, Value::List(v)),
+// URI Template System
+
+mod uri_template_system {
+    use indexmap::IndexMap;
+    use uri_template_system_core::{
+        URITemplate,
+        Value,
+        Values,
+    };
+    use uri_template_system_fixtures::Variable;
+
+    pub fn prepare(variables: Vec<(String, Variable)>) -> Values {
+        Values::from_iter(variables.into_iter().map(|(n, v)| match v {
+            Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
+            Variable::Item(v) => (n, Value::Item(v)),
+            Variable::List(v) => (n, Value::List(v)),
+        }))
+    }
+
+    pub fn test(template: &str, values: &Values) -> String {
+        URITemplate::parse(template).unwrap().expand(values)
     }
 }

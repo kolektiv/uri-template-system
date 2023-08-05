@@ -1,9 +1,7 @@
-use std::{
-    iter::Peekable,
-    slice,
-};
+use std::iter::Peekable;
 
 use nom::{
+    bytes::complete as bytes,
     character::complete as character,
     multi,
     IResult,
@@ -46,32 +44,26 @@ impl VarSpec {
     pub fn parse(input: &str) -> IResult<&str, VarSpec> {
         varname
             .and(Modifier::parse.opt())
-            .map(|(varname, modifier)| VarSpec(varname, modifier))
+            .map(|(varname, modifier)| VarSpec(varname.to_string(), modifier))
             .parse(input)
     }
 }
 
-fn varname(input: &str) -> IResult<&str, String> {
-    varchar
-        .and(
-            multi::many0(
-                character::char('.')
-                    .opt()
-                    .recognize()
-                    .and(varchar)
-                    .map(|(dot, varchar)| Vec::from_iter([dot, varchar])),
-            )
-            .map(|output| output.concat()),
-        )
-        .map(|(output_a, output_b)| [slice::from_ref(&output_a), &output_b].concat())
-        .map(|output| output.concat())
+fn varname(input: &str) -> IResult<&str, &str> {
+    varchars
+        .and(multi::many0(character::char('.').and(varchars)))
+        .recognize()
         .parse(input)
 }
 
-fn varchar(input: &str) -> IResult<&str, &str> {
-    character::satisfy(is_varchar)
+// This is a slightly more optimal encoding of the ABNF rule, as it takes
+// multiple matching characters at a time rather than working on a character by
+// character basis. This is probably not a big deal overall, but is slightly
+// simpler.
+
+fn varchars(input: &str) -> IResult<&str, &str> {
+    multi::many1(bytes::take_while1(is_varchar).or(common::percent_encoded))
         .recognize()
-        .or(common::percent_encoded)
         .parse(input)
 }
 

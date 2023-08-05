@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 
 // Types
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Values {
     pub values: IndexMap<String, Value>,
 }

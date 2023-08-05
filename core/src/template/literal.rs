@@ -34,14 +34,10 @@ impl Literal {
 
 impl Literal {
     pub fn parse(input: &str) -> IResult<&str, Literal> {
-        multi::many1(
-            bytes::take_while1(is_literal)
-                .recognize()
-                .or(common::percent_encoded),
-        )
-        .map(|output| output.concat())
-        .map(Literal::new)
-        .parse(input)
+        multi::many1(bytes::take_while1(is_literal).or(common::percent_encoded))
+            .recognize()
+            .map(Literal::new)
+            .parse(input)
     }
 }
 

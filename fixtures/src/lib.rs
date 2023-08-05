@@ -1,8 +1,4 @@
-use std::{
-    fs::OpenOptions,
-    io::BufReader,
-    path::Path,
-};
+use std::sync::OnceLock;
 
 use indexmap::IndexMap;
 use serde::Deserialize;
@@ -10,6 +6,20 @@ use serde::Deserialize;
 // =============================================================================
 // Fixtures
 // =============================================================================
+
+pub fn examples() -> Vec<Group> {
+    data().0.clone()
+}
+
+pub fn examples_by_section() -> Vec<Group> {
+    data().1.clone()
+}
+
+pub fn extended_tests() -> Vec<Group> {
+    data().2.clone()
+}
+
+// -----------------------------------------------------------------------------
 
 // Types
 
@@ -68,15 +78,22 @@ enum JSONExpansion {
 
 // -----------------------------------------------------------------------------
 
-// Functions
+// Data
 
-pub fn load(path: impl AsRef<Path>) -> Vec<Group> {
-    let file = OpenOptions::new()
-        .read(true)
-        .open(path)
-        .expect("file open error");
+static DATA: OnceLock<(Vec<Group>, Vec<Group>, Vec<Group>)> = OnceLock::new();
 
-    serde_json::from_reader::<_, IndexMap<String, JSONCases>>(BufReader::new(file))
+fn data() -> &'static (Vec<Group>, Vec<Group>, Vec<Group>) {
+    DATA.get_or_init(|| {
+        (
+            load(include_str!("../data/spec-examples.json")),
+            load(include_str!("../data/spec-examples-by-section.json")),
+            load(include_str!("../data/extended-tests.json")),
+        )
+    })
+}
+
+fn load(fixtures_json: &str) -> Vec<Group> {
+    serde_json::from_str::<IndexMap<String, JSONCases>>(fixtures_json)
         .expect("deserialization error")
         .into_iter()
         .map(|(name, cases)| Group {
