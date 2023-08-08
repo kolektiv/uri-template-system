@@ -7,12 +7,21 @@ use anyhow::{
     Error,
     Result,
 };
+use fnv::FnvBuildHasher;
 
 use crate::template::Template;
 
 // =============================================================================
 // URI Template
 // =============================================================================
+
+// Types
+
+// TODO: Don't leak this implementation detail
+
+pub type IndexMap<K, V> = indexmap::IndexMap<K, V, FnvBuildHasher>;
+
+// -----------------------------------------------------------------------------
 
 // Traits
 

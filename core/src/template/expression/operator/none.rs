@@ -1,5 +1,3 @@
-use indexmap::IndexMap;
-
 use crate::{
     codec::Encode,
     template::{
@@ -14,6 +12,7 @@ use crate::{
         Values,
     },
     Expand,
+    IndexMap,
 };
 
 // =============================================================================

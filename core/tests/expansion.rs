@@ -70,8 +70,8 @@ fn test(name: &str, groups: Vec<Group>) {
 // URI Template System
 
 mod uri_template_system {
-    use indexmap::IndexMap;
     use uri_template_system_core::{
+        IndexMap,
         URITemplate,
         Value,
         Values,

@@ -1,4 +1,3 @@
-use indexmap::IndexMap;
 use nom::{
     character::complete as character,
     IResult,
@@ -20,6 +19,7 @@ use crate::{
         Values,
     },
     Expand,
+    IndexMap,
 };
 
 // =============================================================================
