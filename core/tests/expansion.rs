@@ -35,7 +35,7 @@ fn extended_tests() {
 
 fn test(name: &str, groups: Vec<Group>) {
     for group in groups {
-        let name = format!("{name}: {}", &group.name);
+        let name = format!("{name}: {}", group.name);
         let values = uri_template_system::prepare(group.variables);
 
         for (i, case) in group.cases.iter().enumerate() {
@@ -48,14 +48,14 @@ fn test(name: &str, groups: Vec<Group>) {
                     assert!(
                         expected.contains(&actual),
                         "{name} - {i}: Actual expansion \"{actual}\" not found in expected \
-                         expansions {expected:#?}.\nTemplate:\"{template}\"\nValues: {values:#?}"
+                         expansions {expected:#?}.\nTemplate: \"{template}\"\nValues: {values:#?}"
                     )
                 }
                 Expansion::Single(expected) => {
                     assert!(
                         expected.eq(&actual),
                         "{name} - {i}: Actual expansion \"{actual}\" not equal to expected \
-                         expansion \"{expected}\".\nTemplate:\"{template}\"\nValues: {values:#?}"
+                         expansion \"{expected}\".\nTemplate: \"{template}\"\nValues: {values:#?}"
                     )
                 }
             }
@@ -64,7 +64,7 @@ fn test(name: &str, groups: Vec<Group>) {
 }
 
 // =============================================================================
-// Implementations
+// Implementation
 // =============================================================================
 
 // URI Template System
