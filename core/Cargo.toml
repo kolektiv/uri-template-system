@@ -11,10 +11,10 @@ version.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
+fnv = { workspace = true }
 indexmap = { workspace = true }
 nom = { workspace = true }
 nom-supreme = { workspace = true }
-fnv = "1"
 
 [dev-dependencies]
 criterion = { workspace = true }
