@@ -2,6 +2,10 @@
 
 project_name := file_name(justfile_directory())
 
+test *args:
+    #!/usr/bin/env bash
+    cargo test {{args}}
+
 # Criterion (Benches)
 
 criterion_home_root := "~/.data/criterion"
