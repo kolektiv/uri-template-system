@@ -34,10 +34,6 @@ pub struct Encoding {
 
 // Encoding
 
-// pub fn encode(input: &str, output: &mut String, encoding: &Encoding) {
-//     encode_str(output, input, encoding);
-// }
-
 fn encode_str(output: &mut String, input: &str, encoding: &Encoding) {
     let mut state = State::Empty;
 
