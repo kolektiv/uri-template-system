@@ -17,7 +17,6 @@ use crate::{
     value::Values,
     Expand,
     Parse,
-    ParseRef,
 };
 
 // =============================================================================
@@ -27,26 +26,22 @@ use crate::{
 #[derive(Debug, Eq, PartialEq)]
 pub struct Expression<'a> {
     operator: Option<Operator<'a>>,
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
     variable_list: VariableList<'a>,
 }
 
 impl<'a> Expression<'a> {
-    fn new(
-        parse_ref: ParseRef<'a>,
-        operator: Option<Operator<'a>>,
-        variable_list: VariableList<'a>,
-    ) -> Self {
+    fn new(raw: &'a str, operator: Option<Operator<'a>>, variable_list: VariableList<'a>) -> Self {
         Self {
             operator,
-            parse_ref,
+            raw,
             variable_list,
         }
     }
 }
 
 impl<'a> Parse<'a> for Expression<'a> {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut parsed_operator = None;
         let mut parsed_variable_list = Vec::new();
         let mut state = State::default();
@@ -58,35 +53,32 @@ impl<'a> Parse<'a> for Expression<'a> {
                     state.position += 1;
                 }
                 Next::Opening => return Err(Error::msg("expr: expected opening brace")),
-                Next::Operator => {
-                    match Option::<Operator>::parse(&raw[state.position..], base + state.position) {
-                        Ok((position, operator)) => {
-                            parsed_operator = operator;
-                            state.next = Next::VariableList;
-                            state.position += position;
-                        }
-                        Err(err) => return Err(err),
+                Next::Operator => match Option::<Operator>::parse(&raw[state.position..]) {
+                    Ok((position, operator)) => {
+                        parsed_operator = operator;
+                        state.next = Next::VariableList;
+                        state.position += position;
                     }
-                }
-                Next::VariableList => {
-                    match VariableList::parse(&raw[state.position..], base + state.position) {
-                        Ok((position, variable_list)) => {
-                            parsed_variable_list.extend(variable_list);
-                            state.next = Next::Closing;
-                            state.position += position;
-                        }
-                        Err(err) => return Err(err),
+                    Err(err) => return Err(err),
+                },
+                Next::VariableList => match VariableList::parse(&raw[state.position..]) {
+                    Ok((position, variable_list)) => {
+                        parsed_variable_list.extend(variable_list);
+                        state.next = Next::Closing;
+                        state.position += position;
                     }
-                }
+                    Err(err) => return Err(err),
+                },
                 Next::Closing if raw[state.position..].starts_with('}') => {
                     state.position += 1;
 
-                    let len = state.position;
-                    let parse_ref = ParseRef::new(base, base + len - 1, &raw[..len]);
-
                     return Ok((
-                        len,
-                        Self::new(parse_ref, parsed_operator, parsed_variable_list),
+                        state.position,
+                        Self::new(
+                            &raw[..state.position],
+                            parsed_operator,
+                            parsed_variable_list,
+                        ),
                     ));
                 }
                 Next::Closing => return Err(Error::msg("exp: expected closing brace")),

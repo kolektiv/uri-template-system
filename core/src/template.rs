@@ -10,7 +10,6 @@ use crate::{
     value::Values,
     Expand,
     Parse,
-    ParseRef,
 };
 
 // =============================================================================
@@ -20,26 +19,19 @@ use crate::{
 #[derive(Debug, Eq, PartialEq)]
 pub struct Template<'a> {
     pub components: Vec<Component<'a>>,
-    pub parse_ref: ParseRef<'a>,
+    pub raw: &'a str,
 }
 
 impl<'a> Template<'a> {
-    fn new(parse_ref: ParseRef<'a>, components: Vec<Component<'a>>) -> Self {
-        Self {
-            components,
-            parse_ref,
-        }
+    fn new(raw: &'a str, components: Vec<Component<'a>>) -> Self {
+        Self { components, raw }
     }
 }
 
 impl<'a> Parse<'a> for Template<'a> {
-    fn parse(raw: &'a str, _base: usize) -> Result<(usize, Self)> {
-        Vec::<Component<'a>>::parse(raw, 0).map(|(_, components)| {
-            let len = raw.len();
-            let parse_ref = ParseRef::new(0, len - 1, raw);
-
-            (len, Self::new(parse_ref, components))
-        })
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
+        Vec::<Component<'a>>::parse(raw)
+            .map(|(_, components)| (raw.len(), Self::new(raw, components)))
     }
 }
 

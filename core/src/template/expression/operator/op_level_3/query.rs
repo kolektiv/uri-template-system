@@ -17,17 +17,16 @@ use crate::{
     },
     Expand,
     IndexMap,
-    ParseRef,
 };
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Query<'a> {
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
 }
 
 impl<'a> Query<'a> {
-    pub fn new(parse_ref: ParseRef<'a>) -> Self {
-        Self { parse_ref }
+    pub fn new(raw: &'a str) -> Self {
+        Self { raw }
     }
 }
 

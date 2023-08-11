@@ -1,16 +1,14 @@
-use crate::ParseRef;
-
 // =============================================================================
 // Explode
 // =============================================================================
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Explode<'a> {
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
 }
 
 impl<'a> Explode<'a> {
-    pub fn new(parse_ref: ParseRef<'a>) -> Self {
-        Self { parse_ref }
+    pub fn new(raw: &'a str) -> Self {
+        Self { raw }
     }
 }

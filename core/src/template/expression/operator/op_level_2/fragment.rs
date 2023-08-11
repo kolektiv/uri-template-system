@@ -17,7 +17,6 @@ use crate::{
     },
     Expand,
     IndexMap,
-    ParseRef,
 };
 
 // =============================================================================
@@ -26,12 +25,12 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Fragment<'a> {
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
 }
 
 impl<'a> Fragment<'a> {
-    pub fn new(parse_ref: ParseRef<'a>) -> Self {
-        Self { parse_ref }
+    pub fn new(raw: &'a str) -> Self {
+        Self { raw }
     }
 }
 

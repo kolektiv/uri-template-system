@@ -3,29 +3,26 @@ use anyhow::{
     Result,
 };
 
-use crate::{
-    Parse,
-    ParseRef,
-};
+use crate::Parse;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct VarName<'a> {
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
 }
 
 impl<'a> VarName<'a> {
-    const fn new(parse_ref: ParseRef<'a>) -> Self {
-        Self { parse_ref }
+    const fn new(raw: &'a str) -> Self {
+        Self { raw }
     }
 
     pub fn value(&self) -> &str {
-        self.parse_ref.slice
+        self.raw
     }
 }
 
 impl<'a> Parse<'a> for VarName<'a> {
     // TODO: Experiment with ordering for perf?
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut state = State::default();
 
         loop {
@@ -35,10 +32,7 @@ impl<'a> Parse<'a> for VarName<'a> {
                     state.next = Next::VarChars;
                 }
                 Next::Dot => {
-                    let len = state.position;
-                    let parse_ref = ParseRef::new(base, base + len - 1, &raw[..len]);
-
-                    return Ok((len, VarName::new(parse_ref)));
+                    return Ok((state.position, VarName::new(&raw[..state.position])));
                 }
                 Next::VarChars => {
                     for (i, c) in raw[state.position..].char_indices() {

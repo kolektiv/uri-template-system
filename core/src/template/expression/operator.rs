@@ -27,7 +27,6 @@ use crate::{
     value::Values,
     Expand,
     Parse,
-    ParseRef,
 };
 
 // =============================================================================
@@ -42,22 +41,20 @@ pub enum Operator<'a> {
 
 #[rustfmt::skip]
 impl<'a> Parse<'a> for Option<Operator<'a>> {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
         Ok(raw.chars().next().and_then(|c| {
-            let len = 1;
-            let parse_ref = ParseRef::new(base, base, &raw[..1]);
             let operator = match c {
-                '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(parse_ref)))),
-                '#' => Some(Operator::Level2(OpLevel2::Fragment(Fragment::new(parse_ref)))),
-                '.' => Some(Operator::Level3(OpLevel3::Label(Label::new(parse_ref)))),
-                '/' => Some(Operator::Level3(OpLevel3::Path(Path::new(parse_ref)))),
-                ';' => Some(Operator::Level3(OpLevel3::PathParameter(PathParameter::new(parse_ref)))),
-                '?' => Some(Operator::Level3(OpLevel3::Query(Query::new(parse_ref)))),
-                '&' => Some(Operator::Level3(OpLevel3::QueryContinuation(QueryContinuation::new(parse_ref)))),
+                '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(&raw[..1])))),
+                '#' => Some(Operator::Level2(OpLevel2::Fragment(Fragment::new(&raw[..1])))),
+                '.' => Some(Operator::Level3(OpLevel3::Label(Label::new(&raw[..1])))),
+                '/' => Some(Operator::Level3(OpLevel3::Path(Path::new(&raw[..1])))),
+                ';' => Some(Operator::Level3(OpLevel3::PathParameter(PathParameter::new(&raw[..1])))),
+                '?' => Some(Operator::Level3(OpLevel3::Query(Query::new(&raw[..1])))),
+                '&' => Some(Operator::Level3(OpLevel3::QueryContinuation(QueryContinuation::new(&raw[..1])))),
                 _ => None,
             };
 
-            operator.map(|operator| (len, Some(operator)))
+            operator.map(|operator| (1, Some(operator)))
         })
         .unwrap_or((0, None)))
     }

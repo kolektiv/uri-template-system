@@ -16,21 +16,21 @@ pub trait Parse<'a>
 where
     Self: Sized,
 {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)>;
+    fn parse(raw: &'a str) -> Result<(usize, Self)>;
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ParseRef<'a> {
-    start: usize,
-    end: usize,
-    slice: &'a str,
-}
+// #[derive(Debug, Eq, PartialEq)]
+// pub struct ParseRef<'a> {
+//     start: usize,
+//     end: usize,
+//     slice: &'a str,
+// }
 
-impl<'a> ParseRef<'a> {
-    pub fn new(start: usize, end: usize, slice: &'a str) -> Self {
-        Self { start, end, slice }
-    }
-}
+// impl<'a> ParseRef<'a> {
+//     pub fn new(start: usize, end: usize, slice: &'a str) -> Self {
+//         Self { start, end, slice }
+//     }
+// }
 
 // Types
 
@@ -57,7 +57,7 @@ pub struct URITemplate<'a> {
 
 impl<'a> URITemplate<'a> {
     pub fn parse(raw: &'a str) -> Result<Self> {
-        Template::parse(raw, 0).map(|(_, template)| Self { template })
+        Template::parse(raw).map(|(_, template)| Self { template })
     }
 
     pub fn expand(&self, values: &Values) -> String {

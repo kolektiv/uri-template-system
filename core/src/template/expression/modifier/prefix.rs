@@ -1,5 +1,3 @@
-use crate::ParseRef;
-
 // =============================================================================
 // Explode
 // =============================================================================
@@ -9,12 +7,12 @@ use crate::ParseRef;
 #[derive(Debug, Eq, PartialEq)]
 pub struct Prefix<'a> {
     length: usize,
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
 }
 
 impl<'a> Prefix<'a> {
-    pub fn new(parse_ref: ParseRef<'a>, length: usize) -> Self {
-        Self { length, parse_ref }
+    pub fn new(raw: &'a str, length: usize) -> Self {
+        Self { length, raw }
     }
 
     pub fn length(&self) -> usize {

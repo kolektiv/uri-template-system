@@ -24,11 +24,11 @@ use crate::{
 pub type VarSpec<'a> = (VarName<'a>, Option<Modifier<'a>>);
 
 impl<'a> Parse<'a> for VarSpec<'a> {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
-        VarName::parse(raw, base).and_then(|(position_a, varname)| {
-            Option::<Modifier>::parse(&raw[position_a..], base + position_a).and_then(
-                |(position_b, modifier)| Ok((position_a + position_b, (varname, modifier))),
-            )
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
+        VarName::parse(raw).and_then(|(position_a, varname)| {
+            Option::<Modifier>::parse(&raw[position_a..]).and_then(|(position_b, modifier)| {
+                Ok((position_a + position_b, (varname, modifier)))
+            })
         })
     }
 }

@@ -9,7 +9,6 @@ use crate::{
     value::Values,
     Expand,
     Parse,
-    ParseRef,
 };
 
 // =================================================s============================
@@ -18,17 +17,17 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Literal<'a> {
-    parse_ref: ParseRef<'a>,
+    raw: &'a str,
 }
 
 impl<'a> Literal<'a> {
-    const fn new(parse_ref: ParseRef<'a>) -> Self {
-        Self { parse_ref }
+    const fn new(raw: &'a str) -> Self {
+        Self { raw }
     }
 }
 
 impl<'a> Parse<'a> for Literal<'a> {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut state = State::default();
 
         for (i, c) in raw.char_indices() {
@@ -37,10 +36,7 @@ impl<'a> Parse<'a> for Literal<'a> {
                 Next::Literal if is_literal(c) => continue,
                 Next::Literal if is_percent(c) => state.next = Next::Hex1,
                 Next::Literal if i > 0 => {
-                    let len = i;
-                    let parse_ref = ParseRef::new(base, base + i - 1, &raw[..i]);
-
-                    return Ok((len, Self::new(parse_ref)));
+                    return Ok((i, Self::new(&raw[..i])));
                 }
                 Next::Hex1 if is_hex_digit(c) => state.next = Next::Hex2,
                 Next::Hex2 if is_hex_digit(c) => state.next = Next::Literal,
@@ -50,10 +46,7 @@ impl<'a> Parse<'a> for Literal<'a> {
             }
         }
 
-        Ok((
-            raw.len(),
-            Self::new(ParseRef::new(base, base + raw.len() - 1, raw)),
-        ))
+        Ok((raw.len(), Self::new(raw)))
     }
 }
 
@@ -105,6 +98,6 @@ const fn is_hex_digit(c: char) -> bool {
 
 impl<'a> Expand<Values, ()> for Literal<'a> {
     fn expand(&self, output: &mut String, _values: &Values, _context: &()) {
-        output.push_str_encode(self.parse_ref.slice, common::reserved());
+        output.push_str_encode(self.raw, common::reserved());
     }
 }

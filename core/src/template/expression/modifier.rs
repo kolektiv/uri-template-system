@@ -12,7 +12,6 @@ use crate::{
         prefix::Prefix,
     },
     Parse,
-    ParseRef,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -22,16 +21,13 @@ pub enum Modifier<'a> {
 }
 
 impl<'a> Parse<'a> for Option<Modifier<'a>> {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut state = State::default();
 
         loop {
             match &state.next {
                 Next::Symbol if raw[state.position..].starts_with('*') => {
-                    let len = 1;
-                    let parse_ref = ParseRef::new(base, base, &raw[..1]);
-
-                    return Ok((len, Some(Modifier::Explode(Explode::new(parse_ref)))));
+                    return Ok((1, Some(Modifier::Explode(Explode::new(&raw[..1])))));
                 }
                 Next::Symbol if raw[state.position..].starts_with(':') => {
                     state.position += 1;
@@ -54,13 +50,10 @@ impl<'a> Parse<'a> for Option<Modifier<'a>> {
                         }
                     }
                     _ => {
-                        let len = state.position;
-                        let parse_ref = ParseRef::new(base, base + len - 1, &raw[..state.position]);
-
                         return Ok((
-                            len,
+                            state.position,
                             Some(Modifier::Prefix(Prefix::new(
-                                parse_ref,
+                                &raw[..state.position],
                                 raw[1..state.position].parse::<usize>().unwrap(),
                             ))),
                         ));

@@ -19,7 +19,7 @@ pub enum Component<'a> {
 // Parse
 
 impl<'a> Parse<'a> for Vec<Component<'a>> {
-    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+    fn parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut parsed_components = Self::new(); // TODO: Check if a default capacity estimation improves perf
         let mut state = State::default();
 
@@ -29,10 +29,10 @@ impl<'a> Parse<'a> for Vec<Component<'a>> {
             }
 
             let parsed = if raw[state.position..].starts_with('{') {
-                Expression::parse(&raw[state.position..], base + state.position)
+                Expression::parse(&raw[state.position..])
                     .map(|(cursor, expression)| (cursor, Component::Expression(expression)))
             } else {
-                Literal::parse(&raw[state.position..], base + state.position)
+                Literal::parse(&raw[state.position..])
                     .map(|(cursor, literal)| (cursor, Component::Literal(literal)))
             };
 
