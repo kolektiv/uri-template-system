@@ -2,10 +2,12 @@ use crate::{
     codec::Encode,
     template::{
         common,
-        expression::var_spec,
-        Modifier,
-        Prefix,
-        VarSpec,
+        expression::variable_specification::{
+            self,
+            VarSpec,
+        },
+        modifier::Modifier,
+        variable_list::VariableList,
     },
     value::{
         Value,
@@ -30,9 +32,9 @@ pub struct None;
 
 const INFIX: char = ',';
 
-impl Expand<Values, Vec<VarSpec>> for None {
-    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
-        let mut values = var_spec::defined(var_specs, values);
+impl<'a> Expand<Values, VariableList<'a>> for None {
+    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
+        let mut values = variable_specification::defined(variable_list, values);
 
         while let Some((value, var_spec)) = values.next() {
             self.expand(output, value, var_spec);
@@ -44,7 +46,7 @@ impl Expand<Values, Vec<VarSpec>> for None {
     }
 }
 
-impl Expand<Value, VarSpec> for None {
+impl<'a> Expand<Value, VarSpec<'a>> for None {
     fn expand(&self, output: &mut String, value: &Value, var_spec: &VarSpec) {
         match value {
             Value::Item(value) => self.expand(output, value, var_spec),
@@ -54,11 +56,11 @@ impl Expand<Value, VarSpec> for None {
     }
 }
 
-impl Expand<String, VarSpec> for None {
+impl<'a> Expand<String, VarSpec<'a>> for None {
     fn expand(&self, output: &mut String, value: &String, var_spec: &VarSpec) {
         let len = value.len();
-        let len = match var_spec.1 {
-            Some(Modifier::Prefix(Prefix(max_len))) if len > max_len => max_len,
+        let len = match &var_spec.1 {
+            Some(Modifier::Prefix(prefix)) if len > prefix.length() => prefix.length(),
             _ => len,
         };
 
@@ -66,7 +68,7 @@ impl Expand<String, VarSpec> for None {
     }
 }
 
-impl Expand<Vec<String>, VarSpec> for None {
+impl<'a> Expand<Vec<String>, VarSpec<'a>> for None {
     fn expand(&self, output: &mut String, values: &Vec<String>, _var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
@@ -80,7 +82,7 @@ impl Expand<Vec<String>, VarSpec> for None {
     }
 }
 
-impl Expand<IndexMap<String, String>, VarSpec> for None {
+impl<'a> Expand<IndexMap<String, String>, VarSpec<'a>> for None {
     fn expand(&self, output: &mut String, values: &IndexMap<String, String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 

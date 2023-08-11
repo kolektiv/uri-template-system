@@ -1,25 +1,16 @@
-use nom::{
-    character::complete as character,
-    IResult,
-    Parser,
-};
-use nom_supreme::ParserExt;
+use crate::ParseRef;
 
 // =============================================================================
 // Explode
 // =============================================================================
 
-// Types
+#[derive(Debug, Eq, PartialEq)]
+pub struct Explode<'a> {
+    parse_ref: ParseRef<'a>,
+}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Explode;
-
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl Explode {
-    pub fn parse(input: &str) -> IResult<&str, Explode> {
-        character::char('*').value(Explode).parse(input)
+impl<'a> Explode<'a> {
+    pub fn new(parse_ref: ParseRef<'a>) -> Self {
+        Self { parse_ref }
     }
 }

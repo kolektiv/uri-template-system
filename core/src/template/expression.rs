@@ -1,70 +1,121 @@
-mod modifier;
-mod operator;
-mod var_spec;
+pub mod modifier;
+pub mod operator;
+pub mod variable_list;
+pub mod variable_name;
+pub mod variable_specification;
 
-use nom::{
-    character::complete as character,
-    multi,
-    sequence,
-    IResult,
-    Parser,
+use anyhow::{
+    Error,
+    Result,
 };
-use nom_supreme::ParserExt;
 
 use crate::{
+    template::expression::{
+        operator::Operator,
+        variable_list::VariableList,
+    },
     value::Values,
     Expand,
+    Parse,
+    ParseRef,
 };
 
 // =============================================================================
 // Expression
 // =============================================================================
 
-// Types
+#[derive(Debug, Eq, PartialEq)]
+pub struct Expression<'a> {
+    operator: Option<Operator<'a>>,
+    parse_ref: ParseRef<'a>,
+    variable_list: VariableList<'a>,
+}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Expression(Vec<VarSpec>, Option<Operator>);
-
-impl Expression {
-    fn new(variable_list: Vec<VarSpec>, operator: Option<Operator>) -> Self {
-        Self(variable_list, operator)
+impl<'a> Expression<'a> {
+    fn new(
+        parse_ref: ParseRef<'a>,
+        operator: Option<Operator<'a>>,
+        variable_list: VariableList<'a>,
+    ) -> Self {
+        Self {
+            operator,
+            parse_ref,
+            variable_list,
+        }
     }
 }
 
-// -----------------------------------------------------------------------------
+impl<'a> Parse<'a> for Expression<'a> {
+    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+        let mut parsed_operator = None;
+        let mut parsed_variable_list = Vec::new();
+        let mut state = State::default();
 
-// Parsing
+        loop {
+            match &state.next {
+                Next::Opening if raw[state.position..].starts_with('{') => {
+                    state.next = Next::Operator;
+                    state.position += 1;
+                }
+                Next::Opening => return Err(Error::msg("expr: expected opening brace")),
+                Next::Operator => {
+                    match Option::<Operator>::parse(&raw[state.position..], base + state.position) {
+                        Ok((position, operator)) => {
+                            parsed_operator = operator;
+                            state.next = Next::VariableList;
+                            state.position += position;
+                        }
+                        Err(err) => return Err(err),
+                    }
+                }
+                Next::VariableList => {
+                    match VariableList::parse(&raw[state.position..], base + state.position) {
+                        Ok((position, variable_list)) => {
+                            parsed_variable_list.extend(variable_list);
+                            state.next = Next::Closing;
+                            state.position += position;
+                        }
+                        Err(err) => return Err(err),
+                    }
+                }
+                Next::Closing if raw[state.position..].starts_with('}') => {
+                    state.position += 1;
 
-impl Expression {
-    pub fn parse(input: &str) -> IResult<&str, Expression> {
-        sequence::delimited(
-            character::char('{'),
-            Operator::parse
-                .opt()
-                .and(multi::separated_list1(character::char(','), VarSpec::parse)),
-            character::char('}'),
-        )
-        .map(|(operator, variable_list)| Expression::new(variable_list, operator))
-        .parse(input)
+                    let len = state.position;
+                    let parse_ref = ParseRef::new(base, base + len - 1, &raw[..len]);
+
+                    return Ok((
+                        len,
+                        Self::new(parse_ref, parsed_operator, parsed_variable_list),
+                    ));
+                }
+                Next::Closing => return Err(Error::msg("exp: expected closing brace")),
+            }
+        }
     }
+}
+
+#[derive(Default)]
+struct State {
+    next: Next,
+    position: usize,
+}
+
+#[derive(Default)]
+enum Next {
+    #[default]
+    Opening,
+    Operator,
+    VariableList,
+    Closing,
 }
 
 // -----------------------------------------------------------------------------
 
 // Expansion
 
-impl Expand<Values, ()> for Expression {
+impl<'a> Expand<Values, ()> for Expression<'a> {
     fn expand(&self, output: &mut String, values: &Values, _: &()) {
-        self.1.expand(output, values, &self.0);
+        self.operator.expand(output, values, &self.variable_list);
     }
 }
-
-// -----------------------------------------------------------------------------
-
-// Re-Export
-
-pub use self::{
-    modifier::*,
-    operator::*,
-    var_spec::*,
-};

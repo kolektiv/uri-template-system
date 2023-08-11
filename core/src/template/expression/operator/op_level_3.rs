@@ -1,17 +1,20 @@
-mod label;
-mod path;
-mod path_parameter;
-mod query;
-mod query_continuation;
-
-use nom::{
-    branch,
-    IResult,
-    Parser,
-};
+pub mod label;
+pub mod path;
+pub mod path_parameter;
+pub mod query;
+pub mod query_continuation;
 
 use crate::{
-    template::VarSpec,
+    template::expression::{
+        operator::op_level_3::{
+            label::Label,
+            path::Path,
+            path_parameter::PathParameter,
+            query::Query,
+            query_continuation::QueryContinuation,
+        },
+        variable_list::VariableList,
+    },
     value::Values,
     Expand,
 };
@@ -20,58 +23,27 @@ use crate::{
 // OpLevel3
 // =============================================================================
 
-// Types
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum OpLevel3 {
-    Label(Label),
-    Path(Path),
-    PathParameter(PathParameter),
-    Query(Query),
-    QueryContinuation(QueryContinuation),
-}
-
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl OpLevel3 {
-    pub fn parse(input: &str) -> IResult<&str, OpLevel3> {
-        branch::alt((
-            Label::parse.map(OpLevel3::Label),
-            Path::parse.map(OpLevel3::Path),
-            PathParameter::parse.map(OpLevel3::PathParameter),
-            Query::parse.map(OpLevel3::Query),
-            QueryContinuation::parse.map(OpLevel3::QueryContinuation),
-        ))
-        .parse(input)
-    }
+#[derive(Debug, Eq, PartialEq)]
+pub enum OpLevel3<'a> {
+    Label(Label<'a>),
+    Path(Path<'a>),
+    PathParameter(PathParameter<'a>),
+    Query(Query<'a>),
+    QueryContinuation(QueryContinuation<'a>),
 }
 
 // -----------------------------------------------------------------------------
 
 // Expansion
 
-impl Expand<Values, Vec<VarSpec>> for OpLevel3 {
-    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
+impl<'a> Expand<Values, VariableList<'a>> for OpLevel3<'a> {
+    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
         match self {
-            Self::Label(operator) => operator.expand(output, values, var_specs),
-            Self::Path(operator) => operator.expand(output, values, var_specs),
-            Self::PathParameter(operator) => operator.expand(output, values, var_specs),
-            Self::Query(operator) => operator.expand(output, values, var_specs),
-            Self::QueryContinuation(operator) => operator.expand(output, values, var_specs),
+            Self::Label(operator) => operator.expand(output, values, variable_list),
+            Self::Path(operator) => operator.expand(output, values, variable_list),
+            Self::PathParameter(operator) => operator.expand(output, values, variable_list),
+            Self::Query(operator) => operator.expand(output, values, variable_list),
+            Self::QueryContinuation(operator) => operator.expand(output, values, variable_list),
         }
     }
 }
-
-// -----------------------------------------------------------------------------
-
-// Re-Exports
-
-pub use self::{
-    label::*,
-    path::*,
-    path_parameter::*,
-    query::*,
-    query_continuation::*,
-};

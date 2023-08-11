@@ -1,55 +1,45 @@
 mod common;
+mod component;
 mod expression;
 mod literal;
 
-use nom::{
-    branch,
-    multi,
-    IResult,
-    Parser,
-};
-use nom_supreme::ParserExt;
+use anyhow::Result;
 
 use crate::{
+    template::component::Component,
     value::Values,
     Expand,
+    Parse,
+    ParseRef,
 };
 
 // =============================================================================
 // Template
 // =============================================================================
 
-// Types
+#[derive(Debug, Eq, PartialEq)]
+pub struct Template<'a> {
+    pub components: Vec<Component<'a>>,
+    pub parse_ref: ParseRef<'a>,
+}
 
-#[derive(Debug, PartialEq)]
-pub struct Template(Vec<Component>);
-
-impl Template {
-    #[allow(dead_code)]
-    fn new(components: Vec<Component>) -> Self {
-        Self(components)
+impl<'a> Template<'a> {
+    fn new(parse_ref: ParseRef<'a>, components: Vec<Component<'a>>) -> Self {
+        Self {
+            components,
+            parse_ref,
+        }
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum Component {
-    Expression(Expression),
-    Literal(Literal),
-}
+impl<'a> Parse<'a> for Template<'a> {
+    fn parse(raw: &'a str, _base: usize) -> Result<(usize, Self)> {
+        Vec::<Component<'a>>::parse(raw, 0).map(|(_, components)| {
+            let len = raw.len();
+            let parse_ref = ParseRef::new(0, len - 1, raw);
 
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl Template {
-    pub fn parse(input: &str) -> IResult<&str, Template> {
-        multi::many1(branch::alt((
-            Literal::parse.map(Component::Literal),
-            Expression::parse.map(Component::Expression),
-        )))
-        .all_consuming()
-        .map(Template)
-        .parse(input)
+            (len, Self::new(parse_ref, components))
+        })
     }
 }
 
@@ -57,20 +47,11 @@ impl Template {
 
 // Expansion
 
-impl Expand<Values, ()> for Template {
+impl<'a> Expand<Values, ()> for Template<'a> {
     fn expand(&self, output: &mut String, values: &Values, context: &()) {
-        self.0
+        self.components
             .iter()
             .for_each(|component| component.expand(output, values, context));
-    }
-}
-
-impl Expand<Values, ()> for Component {
-    fn expand(&self, output: &mut String, values: &Values, context: &()) {
-        match self {
-            Component::Expression(expression) => expression.expand(output, values, context),
-            Component::Literal(literal) => literal.expand(output, values, context),
-        }
     }
 }
 

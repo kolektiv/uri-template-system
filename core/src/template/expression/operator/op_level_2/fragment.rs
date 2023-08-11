@@ -1,18 +1,15 @@
-use nom::{
-    character::complete as character,
-    IResult,
-    Parser,
-};
-use nom_supreme::ParserExt;
-
 use crate::{
     codec::Encode,
     template::{
         common,
-        expression::var_spec,
-        Modifier,
-        Prefix,
-        VarSpec,
+        expression::{
+            modifier::Modifier,
+            variable_list::VariableList,
+            variable_specification::{
+                self,
+                VarSpec,
+            },
+        },
     },
     value::{
         Value,
@@ -20,24 +17,21 @@ use crate::{
     },
     Expand,
     IndexMap,
+    ParseRef,
 };
 
 // =============================================================================
 // Fragment
 // =============================================================================
 
-// Types
+#[derive(Debug, Eq, PartialEq)]
+pub struct Fragment<'a> {
+    parse_ref: ParseRef<'a>,
+}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Fragment;
-
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl Fragment {
-    pub fn parse(input: &str) -> IResult<&str, Fragment> {
-        character::char('#').value(Fragment).parse(input)
+impl<'a> Fragment<'a> {
+    pub fn new(parse_ref: ParseRef<'a>) -> Self {
+        Self { parse_ref }
     }
 }
 
@@ -48,9 +42,9 @@ impl Fragment {
 const PREFIX: char = '#';
 const INFIX: char = ',';
 
-impl Expand<Values, Vec<VarSpec>> for Fragment {
-    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
-        let mut values = var_spec::defined(var_specs, values);
+impl<'a> Expand<Values, VariableList<'a>> for Fragment<'a> {
+    fn expand(&self, output: &mut String, values: &Values, variable_list: &Vec<VarSpec>) {
+        let mut values = variable_specification::defined(variable_list, values);
 
         if values.peek().is_some() {
             output.push(PREFIX);
@@ -66,7 +60,7 @@ impl Expand<Values, Vec<VarSpec>> for Fragment {
     }
 }
 
-impl Expand<Value, VarSpec> for Fragment {
+impl<'a> Expand<Value, VarSpec<'a>> for Fragment<'a> {
     fn expand(&self, output: &mut String, value: &Value, var_spec: &VarSpec) {
         match value {
             Value::Item(value) => self.expand(output, value, var_spec),
@@ -76,11 +70,11 @@ impl Expand<Value, VarSpec> for Fragment {
     }
 }
 
-impl Expand<String, VarSpec> for Fragment {
+impl<'a> Expand<String, VarSpec<'a>> for Fragment<'a> {
     fn expand(&self, output: &mut String, value: &String, var_spec: &VarSpec) {
         let len = value.len();
-        let len = match var_spec.1 {
-            Some(Modifier::Prefix(Prefix(max_len))) if len > max_len => max_len,
+        let len = match &var_spec.1 {
+            Some(Modifier::Prefix(prefix)) if len > prefix.length() => prefix.length(),
             _ => len,
         };
 
@@ -88,7 +82,7 @@ impl Expand<String, VarSpec> for Fragment {
     }
 }
 
-impl Expand<Vec<String>, VarSpec> for Fragment {
+impl<'a> Expand<Vec<String>, VarSpec<'a>> for Fragment<'a> {
     fn expand(&self, output: &mut String, values: &Vec<String>, _var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
@@ -102,7 +96,7 @@ impl Expand<Vec<String>, VarSpec> for Fragment {
     }
 }
 
-impl Expand<IndexMap<String, String>, VarSpec> for Fragment {
+impl<'a> Expand<IndexMap<String, String>, VarSpec<'a>> for Fragment<'a> {
     fn expand(&self, output: &mut String, values: &IndexMap<String, String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 

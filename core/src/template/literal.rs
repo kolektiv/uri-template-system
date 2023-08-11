@@ -1,113 +1,110 @@
-use nom::{
-    bytes::complete as bytes,
-    multi,
-    IResult,
-    Parser,
+use anyhow::{
+    Error,
+    Result,
 };
-use nom_supreme::ParserExt;
 
 use crate::{
     codec::Encode,
     template::common,
     value::Values,
     Expand,
+    Parse,
+    ParseRef,
 };
 
 // =================================================s============================
 // Literal
 // =============================================================================
 
-// Types
+#[derive(Debug, Eq, PartialEq)]
+pub struct Literal<'a> {
+    parse_ref: ParseRef<'a>,
+}
 
-#[derive(Debug, PartialEq)]
-pub struct Literal(String);
-
-impl Literal {
-    fn new(literal: impl Into<String>) -> Self {
-        Self(literal.into())
+impl<'a> Literal<'a> {
+    const fn new(parse_ref: ParseRef<'a>) -> Self {
+        Self { parse_ref }
     }
 }
 
-// -----------------------------------------------------------------------------
+impl<'a> Parse<'a> for Literal<'a> {
+    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)> {
+        let mut state = State::default();
 
-// Parsing
+        for (i, c) in raw.char_indices() {
+            match &state.next {
+                // TODO: Experiment with ordering here - may or may not have perf impact
+                Next::Literal if is_literal(c) => continue,
+                Next::Literal if is_percent(c) => state.next = Next::Hex1,
+                Next::Literal if i > 0 => {
+                    let len = i;
+                    let parse_ref = ParseRef::new(base, base + i - 1, &raw[..i]);
 
-impl Literal {
-    pub fn parse(input: &str) -> IResult<&str, Literal> {
-        multi::many1(bytes::take_while1(is_literal).or(common::percent_encoded))
-            .recognize()
-            .map(Literal::new)
-            .parse(input)
+                    return Ok((len, Self::new(parse_ref)));
+                }
+                Next::Hex1 if is_hex_digit(c) => state.next = Next::Hex2,
+                Next::Hex2 if is_hex_digit(c) => state.next = Next::Literal,
+                _ => {
+                    return Err(Error::msg("lit: expected valid char(s)"));
+                }
+            }
+        }
+
+        Ok((
+            raw.len(),
+            Self::new(ParseRef::new(base, base + raw.len() - 1, raw)),
+        ))
     }
+}
+
+#[derive(Default)]
+struct State {
+    next: Next,
+}
+
+#[derive(Default)]
+enum Next {
+    #[default]
+    Literal,
+    Hex1,
+    Hex2,
 }
 
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_ucschar(c: char) -> bool {
+#[inline]
+const fn is_literal(c: char) -> bool {
     match c {
-        | '\u{0000a0}'..='\u{00d7ff}'
-        | '\u{00f900}'..='\u{00fdcf}'
-        | '\u{00fdf0}'..='\u{00ffef}'
-        | '\u{010000}'..='\u{01fffd}'
-        | '\u{020000}'..='\u{02fffd}'
-        | '\u{030000}'..='\u{03fffd}'
-        | '\u{040000}'..='\u{04fffd}'
-        | '\u{050000}'..='\u{05fffd}'
-        | '\u{060000}'..='\u{06fffd}'
-        | '\u{070000}'..='\u{07fffd}'
-        | '\u{080000}'..='\u{08fffd}'
-        | '\u{090000}'..='\u{09fffd}'
-        | '\u{0a0000}'..='\u{0afffd}'
-        | '\u{0b0000}'..='\u{0bfffd}'
-        | '\u{0c0000}'..='\u{0cfffd}'
-        | '\u{0d0000}'..='\u{0dfffd}'
-        | '\u{0e0000}'..='\u{0efffd}' => true,
-        _ => false,
+        | '\u{000000}'..='\u{000020}'           // ASCII Ctl     | ASCII Range
+        | '\u{000022}'                          // ASCII Misc    | ASCII Range
+        | '\u{000025}'                          //               | ASCII Range
+        | '\u{00003c}'                          //               | ASCII Range
+        | '\u{00003e}'                          //               | ASCII Range
+        | '\u{00005c}'                          //               | ASCII Range
+        | '\u{00005e}'                          //               | ASCII Range
+        | '\u{000060}'                          //               | ASCII Range
+        | '\u{00007b}'..='\u{00007d}'           //               | ASCII Range
+        | '\u{00007f}'..='\u{00009f}' => false, // Unicode Ctl   | Unicode Range
+        _ => true,
     }
 }
 
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-fn is_iprivate(c: char) -> bool {
-    match c {
-        | '\u{00e000}'..='\u{00f8ff}'
-        | '\u{0f0000}'..='\u{0ffffd}'
-        | '\u{100000}'..='\u{10fffd}' => true,
-        _ => false,
-    }
+#[inline]
+const fn is_percent(c: char) -> bool {
+    c == '%'
 }
 
-// Note: The `is_literal` fn does not match the original RFC 6570, but matches
-// the updates made by Errata 6937 which reinstates the "'" character as an
-// allowed literal character. The "official" test cases have some additional
-// tests which exercise this functionality, but it is not obvious that the test
-// cases do not reflect the RFC as-was!
-
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-fn is_literal(c: char) -> bool {
-    match c {
-        | '\x21'
-        | '\x23'..='\x24'
-        | '\x26'..='\x3b'
-        | '\x3d'
-        | '\x3f'..='\x5b'
-        | '\x5d'
-        | '\x5f'
-        | '\x61'..='\x7a'
-        | '\x7e' => true,
-        _ if is_ucschar(c) => true,
-        _ if is_iprivate(c) => true,
-        _ => false,
-    }
+#[inline]
+const fn is_hex_digit(c: char) -> bool {
+    c.is_ascii_hexdigit()
 }
 
 // -----------------------------------------------------------------------------
 
 // Expansion
 
-impl Expand<Values, ()> for Literal {
+impl<'a> Expand<Values, ()> for Literal<'a> {
     fn expand(&self, output: &mut String, _values: &Values, _context: &()) {
-        output.push_str_encode(&self.0, common::reserved());
+        output.push_str_encode(self.parse_ref.slice, common::reserved());
     }
 }

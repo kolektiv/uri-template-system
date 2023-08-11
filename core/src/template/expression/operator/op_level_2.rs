@@ -1,14 +1,14 @@
-mod fragment;
-mod reserved;
-
-use nom::{
-    branch,
-    IResult,
-    Parser,
-};
+pub mod fragment;
+pub mod reserved;
 
 use crate::{
-    template::VarSpec,
+    template::{
+        expression::operator::op_level_2::{
+            fragment::Fragment,
+            reserved::Reserved,
+        },
+        variable_list::VariableList,
+    },
     value::Values,
     Expand,
 };
@@ -17,46 +17,21 @@ use crate::{
 // OpLevel2
 // =============================================================================
 
-// Types
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum OpLevel2 {
-    Reserved(Reserved),
-    Fragment(Fragment),
-}
-
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl OpLevel2 {
-    pub fn parse(input: &str) -> IResult<&str, OpLevel2> {
-        branch::alt((
-            Fragment::parse.map(OpLevel2::Fragment),
-            Reserved::parse.map(OpLevel2::Reserved),
-        ))
-        .parse(input)
-    }
+#[derive(Debug, Eq, PartialEq)]
+pub enum OpLevel2<'a> {
+    Fragment(Fragment<'a>),
+    Reserved(Reserved<'a>),
 }
 
 // -----------------------------------------------------------------------------
 
 // Expansion
 
-impl Expand<Values, Vec<VarSpec>> for OpLevel2 {
-    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
+impl<'a> Expand<Values, VariableList<'a>> for OpLevel2<'a> {
+    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
         match self {
-            Self::Fragment(operator) => operator.expand(output, values, var_specs),
-            Self::Reserved(operator) => operator.expand(output, values, var_specs),
+            Self::Fragment(operator) => operator.expand(output, values, variable_list),
+            Self::Reserved(operator) => operator.expand(output, values, variable_list),
         }
     }
 }
-
-// -----------------------------------------------------------------------------
-
-// Re-Exports
-
-pub use self::{
-    fragment::*,
-    reserved::*,
-};

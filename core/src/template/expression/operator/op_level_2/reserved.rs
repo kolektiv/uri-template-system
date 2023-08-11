@@ -1,18 +1,15 @@
-use nom::{
-    character::complete as character,
-    IResult,
-    Parser,
-};
-use nom_supreme::ParserExt;
-
 use crate::{
     codec::Encode,
     template::{
         common,
-        expression::var_spec,
-        Modifier,
-        Prefix,
-        VarSpec,
+        expression::{
+            modifier::Modifier,
+            variable_list::VariableList,
+            variable_specification::{
+                self,
+                VarSpec,
+            },
+        },
     },
     value::{
         Value,
@@ -20,24 +17,21 @@ use crate::{
     },
     Expand,
     IndexMap,
+    ParseRef,
 };
 
 // =============================================================================
 // Reserved
 // =============================================================================
 
-// Types
+#[derive(Debug, Eq, PartialEq)]
+pub struct Reserved<'a> {
+    parse_ref: ParseRef<'a>,
+}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Reserved;
-
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl Reserved {
-    pub fn parse(input: &str) -> IResult<&str, Reserved> {
-        character::char('+').value(Reserved).parse(input)
+impl<'a> Reserved<'a> {
+    pub fn new(parse_ref: ParseRef<'a>) -> Self {
+        Self { parse_ref }
     }
 }
 
@@ -47,9 +41,9 @@ impl Reserved {
 
 const INFIX: char = ',';
 
-impl Expand<Values, Vec<VarSpec>> for Reserved {
-    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
-        let mut values = var_spec::defined(var_specs, values);
+impl<'a> Expand<Values, VariableList<'a>> for Reserved<'a> {
+    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
+        let mut values = variable_specification::defined(variable_list, values);
 
         while let Some((value, var_spec)) = values.next() {
             self.expand(output, value, var_spec);
@@ -61,7 +55,7 @@ impl Expand<Values, Vec<VarSpec>> for Reserved {
     }
 }
 
-impl Expand<Value, VarSpec> for Reserved {
+impl<'a> Expand<Value, VarSpec<'a>> for Reserved<'a> {
     fn expand(&self, output: &mut String, value: &Value, var_spec: &VarSpec) {
         match value {
             Value::Item(value) => self.expand(output, value, var_spec),
@@ -71,11 +65,11 @@ impl Expand<Value, VarSpec> for Reserved {
     }
 }
 
-impl Expand<String, VarSpec> for Reserved {
+impl<'a> Expand<String, VarSpec<'a>> for Reserved<'a> {
     fn expand(&self, output: &mut String, value: &String, var_spec: &VarSpec) {
         let len = value.len();
-        let len = match var_spec.1 {
-            Some(Modifier::Prefix(Prefix(max_len))) if len > max_len => max_len,
+        let len = match &var_spec.1 {
+            Some(Modifier::Prefix(prefix)) if len > prefix.length() => prefix.length(),
             _ => len,
         };
 
@@ -83,7 +77,7 @@ impl Expand<String, VarSpec> for Reserved {
     }
 }
 
-impl Expand<Vec<String>, VarSpec> for Reserved {
+impl<'a> Expand<Vec<String>, VarSpec<'a>> for Reserved<'a> {
     fn expand(&self, output: &mut String, values: &Vec<String>, _var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
@@ -97,7 +91,7 @@ impl Expand<Vec<String>, VarSpec> for Reserved {
     }
 }
 
-impl Expand<IndexMap<String, String>, VarSpec> for Reserved {
+impl<'a> Expand<IndexMap<String, String>, VarSpec<'a>> for Reserved<'a> {
     fn expand(&self, output: &mut String, values: &IndexMap<String, String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 

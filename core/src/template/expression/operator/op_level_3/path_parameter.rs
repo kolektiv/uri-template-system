@@ -1,18 +1,15 @@
-use nom::{
-    character::complete as character,
-    IResult,
-    Parser,
-};
-use nom_supreme::ParserExt;
-
 use crate::{
     codec::Encode,
     template::{
         common,
-        expression::var_spec,
-        Modifier,
-        Prefix,
-        VarSpec,
+        expression::{
+            modifier::Modifier,
+            variable_list::VariableList,
+            variable_specification::{
+                self,
+                VarSpec,
+            },
+        },
     },
     value::{
         Value,
@@ -20,18 +17,17 @@ use crate::{
     },
     Expand,
     IndexMap,
+    ParseRef,
 };
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct PathParameter;
+#[derive(Debug, Eq, PartialEq)]
+pub struct PathParameter<'a> {
+    parse_ref: ParseRef<'a>,
+}
 
-// -----------------------------------------------------------------------------
-
-// Parsing
-
-impl PathParameter {
-    pub fn parse(input: &str) -> IResult<&str, PathParameter> {
-        character::char(';').value(PathParameter).parse(input)
+impl<'a> PathParameter<'a> {
+    pub fn new(parse_ref: ParseRef<'a>) -> Self {
+        Self { parse_ref }
     }
 }
 
@@ -42,9 +38,9 @@ impl PathParameter {
 const PREFIX: char = ';';
 const SEPARATOR: char = ';';
 
-impl Expand<Values, Vec<VarSpec>> for PathParameter {
-    fn expand(&self, output: &mut String, values: &Values, var_specs: &Vec<VarSpec>) {
-        let mut defined = var_spec::defined(var_specs, values);
+impl<'a> Expand<Values, VariableList<'a>> for PathParameter<'a> {
+    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
+        let mut defined = variable_specification::defined(variable_list, values);
 
         if defined.peek().is_some() {
             output.push(PREFIX);
@@ -60,7 +56,7 @@ impl Expand<Values, Vec<VarSpec>> for PathParameter {
     }
 }
 
-impl Expand<Value, VarSpec> for PathParameter {
+impl<'a> Expand<Value, VarSpec<'a>> for PathParameter<'a> {
     fn expand(&self, output: &mut String, value: &Value, var_spec: &VarSpec) {
         match value {
             Value::Item(value) => self.expand(output, value, var_spec),
@@ -70,15 +66,15 @@ impl Expand<Value, VarSpec> for PathParameter {
     }
 }
 
-impl Expand<String, VarSpec> for PathParameter {
+impl<'a> Expand<String, VarSpec<'a>> for PathParameter<'a> {
     fn expand(&self, output: &mut String, value: &String, var_spec: &VarSpec) {
         let len = value.len();
-        let len = match var_spec.1 {
-            Some(Modifier::Prefix(Prefix(max_len))) if len > max_len => max_len,
+        let len = match &var_spec.1 {
+            Some(Modifier::Prefix(prefix)) if len > prefix.length() => prefix.length(),
             _ => len,
         };
 
-        output.push_str_encode(&var_spec.0, common::reserved());
+        output.push_str_encode(var_spec.0.value(), common::reserved());
 
         if !value.is_empty() {
             output.push('=');
@@ -87,14 +83,14 @@ impl Expand<String, VarSpec> for PathParameter {
     }
 }
 
-impl Expand<Vec<String>, VarSpec> for PathParameter {
+impl<'a> Expand<Vec<String>, VarSpec<'a>> for PathParameter<'a> {
     fn expand(&self, output: &mut String, values: &Vec<String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
         match var_spec.1 {
             Some(Modifier::Explode(_)) => {
                 while let Some(value) = values.next() {
-                    output.push_str_encode(&var_spec.0, common::reserved());
+                    output.push_str_encode(var_spec.0.value(), common::reserved());
                     output.push('=');
                     output.push_str_encode(value, common::unreserved());
 
@@ -104,7 +100,7 @@ impl Expand<Vec<String>, VarSpec> for PathParameter {
                 }
             }
             _ => {
-                output.push_str_encode(&var_spec.0, common::reserved());
+                output.push_str_encode(var_spec.0.value(), common::reserved());
                 output.push('=');
 
                 while let Some(value) = values.next() {
@@ -119,7 +115,7 @@ impl Expand<Vec<String>, VarSpec> for PathParameter {
     }
 }
 
-impl Expand<IndexMap<String, String>, VarSpec> for PathParameter {
+impl<'a> Expand<IndexMap<String, String>, VarSpec<'a>> for PathParameter<'a> {
     fn expand(&self, output: &mut String, values: &IndexMap<String, String>, var_spec: &VarSpec) {
         let mut values = values.iter().peekable();
 
@@ -136,7 +132,7 @@ impl Expand<IndexMap<String, String>, VarSpec> for PathParameter {
                 }
             }
             _ => {
-                output.push_str_encode(&var_spec.0, common::reserved());
+                output.push_str_encode(var_spec.0.value(), common::reserved());
                 output.push('=');
 
                 while let Some((key, value)) = values.next() {

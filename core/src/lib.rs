@@ -3,10 +3,7 @@ mod codec;
 mod template;
 mod value;
 
-use anyhow::{
-    Error,
-    Result,
-};
+use anyhow::Result;
 use fnv::FnvBuildHasher;
 
 use crate::template::Template;
@@ -14,6 +11,26 @@ use crate::template::Template;
 // =============================================================================
 // URI Template
 // =============================================================================
+
+pub trait Parse<'a>
+where
+    Self: Sized,
+{
+    fn parse(raw: &'a str, base: usize) -> Result<(usize, Self)>;
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ParseRef<'a> {
+    start: usize,
+    end: usize,
+    slice: &'a str,
+}
+
+impl<'a> ParseRef<'a> {
+    pub fn new(start: usize, end: usize, slice: &'a str) -> Self {
+        Self { start, end, slice }
+    }
+}
 
 // Types
 
@@ -33,18 +50,14 @@ trait Expand<V, C> {
 
 // Types
 
-#[derive(Debug, PartialEq)]
-pub struct URITemplate {
-    template: Template,
+#[derive(Debug, Eq, PartialEq)]
+pub struct URITemplate<'a> {
+    template: Template<'a>,
 }
 
-impl URITemplate {
-    pub fn parse(input: impl Into<String>) -> Result<Self> {
-        let template = Template::parse(&input.into())
-            .map(|(_, template)| template)
-            .map_err(|_| Error::msg("uri template parse failed"))?; // TODO: Proper Error
-
-        Ok(Self { template })
+impl<'a> URITemplate<'a> {
+    pub fn parse(raw: &'a str) -> Result<Self> {
+        Template::parse(raw, 0).map(|(_, template)| Self { template })
     }
 
     pub fn expand(&self, values: &Values) -> String {
