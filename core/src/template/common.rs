@@ -25,9 +25,36 @@ pub fn unreserved() -> &'static Encoding {
     })
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_gen_delim(c: char) -> bool {
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_reserved(c: char) -> bool {
+    match c {
+        _ if is_gen_delim(c) => true,
+        _ if is_sub_delim(c) => true,
+        _ => false,
+    }
+}
+
+#[rustfmt::skip]
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_unreserved(c: char) -> bool {
+    match c {
+        | '\x30'..='\x39'
+        | '\x41'..='\x5a'
+        | '\x61'..='\x7a'
+        | '\x2d'..='\x2e'
+        | '\x5f'
+        | '\x7e' => true,
+        _ => false,
+    }
+}
+
+#[rustfmt::skip]
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_gen_delim(c: char) -> bool {
     match c {
         | '\x23'
         | '\x2f'
@@ -40,39 +67,16 @@ fn is_gen_delim(c: char) -> bool {
     }
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_sub_delim(c: char) -> bool {
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_sub_delim(c: char) -> bool {
     match c {
         | '\x21'
         | '\x24'
         | '\x26'..='\x2c'
         | '\x3b'
         | '\x3d' => true,
-        _ => false,
-    }
-}
-
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-fn is_reserved(c: char) -> bool {
-    match c {
-        _ if is_gen_delim(c) => true,
-        _ if is_sub_delim(c) => true,
-        _ => false,
-    }
-}
-
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-fn is_unreserved(c: char) -> bool {
-    match c {
-        | '\x30'..='\x39'
-        | '\x41'..='\x5a'
-        | '\x61'..='\x7a'
-        | '\x2d'..='\x2e'
-        | '\x5f'
-        | '\x7e' => true,
         _ => false,
     }
 }

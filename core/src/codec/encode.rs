@@ -63,15 +63,12 @@ fn encode_char_utf8(output: &mut String, input: char) {
 }
 
 fn encode_char_percent(output: &mut String, input: char) {
-    input
-        .encode_utf8(&mut [0; 4])
-        .as_bytes()
-        .iter()
-        .for_each(|byte| {
-            encode_byte_percent(*byte)
-                .iter()
-                .for_each(|char| output.push(*char))
-        });
+    output.extend(
+        input
+            .encode_utf8(&mut [0; 4])
+            .bytes()
+            .flat_map(encode_byte_percent),
+    );
 }
 
 fn encode_byte_percent(input: u8) -> &'static [char; 3] {
@@ -81,18 +78,20 @@ fn encode_byte_percent(input: u8) -> &'static [char; 3] {
         .unwrap()
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_hex_digit(c: char) -> bool {
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_hex_digit(c: char) -> bool {
     match c {
         _ if c.is_ascii_hexdigit() => true,
         _ => false,
     }
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_percent(c: char) -> bool {
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_percent(c: char) -> bool {
     match c {
         _ if c == '%' => true,
         _ => false,

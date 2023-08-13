@@ -30,20 +30,15 @@ impl<'a> Parse<'a> for Literal<'a> {
     fn parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut state = State::default();
 
+        // TODO: Experiment with ordering here - may or may not have perf impact
         for (i, c) in raw.char_indices() {
             match &state.next {
-                // TODO: Experiment with ordering here - may or may not have perf impact
                 Next::Literal if is_literal(c) => continue,
                 Next::Literal if is_percent(c) => state.next = Next::Hex1,
-                Next::Literal if i > 0 => {
-                    return Ok((i, Self::new(&raw[..i])));
-                }
+                Next::Literal if i > 0 => return Ok((i, Self::new(&raw[..i]))),
                 Next::Hex1 if is_hex_digit(c) => state.next = Next::Hex2,
                 Next::Hex2 if is_hex_digit(c) => state.next = Next::Literal,
-                _ => {
-                    println!("raw: {raw}");
-                    return Err(Error::msg("lit: expected valid char(s)"));
-                }
+                _ => return Err(Error::msg("lit: expected valid char(s)")),
             }
         }
 
