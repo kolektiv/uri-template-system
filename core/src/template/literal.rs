@@ -41,6 +41,7 @@ impl<'a> Parse<'a> for Literal<'a> {
                 Next::Hex1 if is_hex_digit(c) => state.next = Next::Hex2,
                 Next::Hex2 if is_hex_digit(c) => state.next = Next::Literal,
                 _ => {
+                    println!("raw: {raw}");
                     return Err(Error::msg("lit: expected valid char(s)"));
                 }
             }
@@ -68,17 +69,56 @@ enum Next {
 #[inline]
 const fn is_literal(c: char) -> bool {
     match c {
-        | '\u{000000}'..='\u{000020}'           // ASCII Ctl     | ASCII Range
-        | '\u{000022}'                          // ASCII Misc    | ASCII Range
-        | '\u{000025}'                          //               | ASCII Range
-        | '\u{00003c}'                          //               | ASCII Range
-        | '\u{00003e}'                          //               | ASCII Range
-        | '\u{00005c}'                          //               | ASCII Range
-        | '\u{00005e}'                          //               | ASCII Range
-        | '\u{000060}'                          //               | ASCII Range
-        | '\u{00007b}'..='\u{00007d}'           //               | ASCII Range
-        | '\u{00007f}'..='\u{00009f}' => false, // Unicode Ctl   | Unicode Range
-        _ => true,
+        | '\u{000061}'..='\u{00007a}' // a..z
+        | '\u{00003f}'..='\u{00005b}' // ?, @, A..Z, [
+        | '\u{000026}'..='\u{00003b}' // &, ', (, ),*, +, ,, -, -, ., /, 0..9, :, ;,
+        | '\u{000021}'
+        | '\u{000023}'..='\u{000024}'
+        | '\u{00003d}'
+        | '\u{00005d}'
+        | '\u{00005f}'
+        | '\u{00007e}' => true,
+        | _ if is_ucschar(c) => true,
+        | _ if is_iprivate(c) => true,
+        _ => false
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+#[inline]
+const fn is_ucschar(c: char) -> bool {
+    match c {
+        | '\u{0000a0}'..='\u{00d7ff}'
+        | '\u{00f900}'..='\u{00fdcf}'
+        | '\u{00fdf0}'..='\u{00ffef}'
+        | '\u{010000}'..='\u{01fffd}'
+        | '\u{020000}'..='\u{02fffd}'
+        | '\u{030000}'..='\u{03fffd}'
+        | '\u{040000}'..='\u{04fffd}'
+        | '\u{050000}'..='\u{05fffd}'
+        | '\u{060000}'..='\u{06fffd}'
+        | '\u{070000}'..='\u{07fffd}'
+        | '\u{080000}'..='\u{08fffd}'
+        | '\u{090000}'..='\u{09fffd}'
+        | '\u{0a0000}'..='\u{0afffd}'
+        | '\u{0b0000}'..='\u{0bfffd}'
+        | '\u{0c0000}'..='\u{0cfffd}'
+        | '\u{0d0000}'..='\u{0dfffd}'
+        | '\u{0e0000}'..='\u{0efffd}' => true,
+        _ => false,
+    }
+}
+
+#[allow(clippy::match_like_matches_macro)]
+#[rustfmt::skip]
+#[inline]
+const fn is_iprivate(c: char) -> bool {
+    match c {
+        | '\u{00e000}'..='\u{00f8ff}'
+        | '\u{0f0000}'..='\u{0ffffd}'
+        | '\u{100000}'..='\u{10fffd}' => true,
+        _ => false,
     }
 }
 
