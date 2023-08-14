@@ -51,31 +51,6 @@ impl<'a> TryParse<'a> for VarName<'a> {
                             state.next = Next::Dot;
                         }
                     }
-
-                    // for (i, c) in raw[state.position..].char_indices() {
-
-                    //     match &state.inner.next {
-                    //         NextInner::VarChar if is_varchar(c) => continue,
-                    //         NextInner::VarChar if is_percent(c) => {
-                    //             state.inner.next = NextInner::Hex1
-                    //         }
-                    //         NextInner::VarChar if i > 0 => {
-                    //             state.position += i;
-                    //             state.next = Next::Dot;
-
-                    //             break;
-                    //         }
-                    //         NextInner::Hex1 if is_hex_digit(c) => {
-                    //             state.inner.next = NextInner::Hex2
-                    //         }
-                    //         NextInner::Hex2 if is_hex_digit(c) => {
-                    //             state.inner.next = NextInner::VarChar
-                    //         }
-                    //         _ => {
-                    //             return Err(Error::msg("varname: expected
-                    // valid char(s)"));         }
-                    //     }
-                    // }
                 }
             }
         }
@@ -84,15 +59,9 @@ impl<'a> TryParse<'a> for VarName<'a> {
 
 #[derive(Default)]
 struct State {
-    // inner: StateInner,
     next: Next,
     position: usize,
 }
-
-// #[derive(Default)]
-// struct StateInner {
-//     next: NextInner,
-// }
 
 #[derive(Default)]
 enum Next {
@@ -100,14 +69,6 @@ enum Next {
     #[default]
     VarChars,
 }
-
-// #[derive(Default)]
-// enum NextInner {
-//     Hex1,
-//     Hex2,
-//     #[default]
-//     VarChar,
-// }
 
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
@@ -121,13 +82,3 @@ fn is_varchar_ascii(b: u8) -> bool {
         _ => false,
     }
 }
-
-// #[inline]
-// const fn is_percent(c: char) -> bool {
-//     c == '%'
-// }
-
-// #[inline]
-// const fn is_hex_digit(c: char) -> bool {
-//     c.is_ascii_hexdigit()
-// }
