@@ -5,10 +5,16 @@ use anyhow::{
 
 use crate::{
     codec::Encode,
+    common::matcher::{
+        Ascii,
+        Matcher,
+        PercentEncoded,
+        Unicode,
+    },
     template::common,
     value::Values,
     Expand,
-    Parse,
+    TryParse,
 };
 
 // =================================================s============================
@@ -26,55 +32,35 @@ impl<'a> Literal<'a> {
     }
 }
 
-impl<'a> Parse<'a> for Literal<'a> {
-    fn parse(raw: &'a str) -> Result<(usize, Self)> {
-        let mut state = State::default();
-
-        // TODO: Experiment with ordering here - may or may not have perf impact
-        for (i, c) in raw.char_indices() {
-            match &state.next {
-                Next::Literal if is_literal(c) => continue,
-                Next::Literal if is_percent(c) => state.next = Next::Hex1,
-                Next::Literal if i > 0 => return Ok((i, Self::new(&raw[..i]))),
-                Next::Hex1 if is_hex_digit(c) => state.next = Next::Hex2,
-                Next::Hex2 if is_hex_digit(c) => state.next = Next::Literal,
-                _ => return Err(Error::msg("lit: expected valid char(s)")),
-            }
+impl<'a> TryParse<'a> for Literal<'a> {
+    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
+        match (
+            Ascii::new(is_literal_ascii),
+            PercentEncoded,
+            Unicode::new(is_literal_unicode),
+        )
+            .matches(raw)
+        {
+            0 => Err(Error::msg("lit: expected valid char(s)")),
+            n => Ok((n, Literal::new(&raw[..n]))),
         }
-
-        Ok((raw.len(), Self::new(raw)))
     }
-}
-
-#[derive(Default)]
-struct State {
-    next: Next,
-}
-
-#[derive(Default)]
-enum Next {
-    #[default]
-    Literal,
-    Hex1,
-    Hex2,
 }
 
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
 #[inline]
-const fn is_literal(c: char) -> bool {
-    match c {
-        | '\u{000061}'..='\u{00007a}' // a..z
-        | '\u{00003f}'..='\u{00005b}' // ?, @, A..Z, [
-        | '\u{000026}'..='\u{00003b}' // &, ', (, ),*, +, ,, -, -, ., /, 0..9, :, ;,
-        | '\u{000021}'
-        | '\u{000023}'..='\u{000024}'
-        | '\u{00003d}'
-        | '\u{00005d}'
-        | '\u{00005f}'
-        | '\u{00007e}' => true,
-        | _ if is_ucschar(c) => true,
-        | _ if is_iprivate(c) => true,
+fn is_literal_ascii(b: u8) -> bool {
+    match b {
+        | b'\x61'..=b'\x7a' // a..z
+        | b'\x3f'..=b'\x5b' // ?, @, A..Z, [
+        | b'\x26'..=b'\x3b' // &, ', (, ),*, +, ,, -, -, ., /, 0..9, :, ;,
+        | b'\x21'
+        | b'\x23'..=b'\x24'
+        | b'\x3d'
+        | b'\x5d'
+        | b'\x5f'
+        | b'\x7e' => true,
         _ => false
     }
 }
@@ -82,9 +68,9 @@ const fn is_literal(c: char) -> bool {
 #[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
 #[inline]
-const fn is_ucschar(c: char) -> bool {
+fn is_literal_unicode(c: char) -> bool {
     match c {
-        | '\u{0000a0}'..='\u{00d7ff}'
+        | '\u{0000a0}'..='\u{00d7ff}' // ucschar...
         | '\u{00f900}'..='\u{00fdcf}'
         | '\u{00fdf0}'..='\u{00ffef}'
         | '\u{010000}'..='\u{01fffd}'
@@ -100,31 +86,12 @@ const fn is_ucschar(c: char) -> bool {
         | '\u{0b0000}'..='\u{0bfffd}'
         | '\u{0c0000}'..='\u{0cfffd}'
         | '\u{0d0000}'..='\u{0dfffd}'
-        | '\u{0e0000}'..='\u{0efffd}' => true,
-        _ => false,
-    }
-}
-
-#[allow(clippy::match_like_matches_macro)]
-#[rustfmt::skip]
-#[inline]
-const fn is_iprivate(c: char) -> bool {
-    match c {
-        | '\u{00e000}'..='\u{00f8ff}'
+        | '\u{0e0000}'..='\u{0efffd}'
+        | '\u{00e000}'..='\u{00f8ff}' // iprivate...
         | '\u{0f0000}'..='\u{0ffffd}'
         | '\u{100000}'..='\u{10fffd}' => true,
         _ => false,
     }
-}
-
-#[inline]
-const fn is_percent(c: char) -> bool {
-    c == '%'
-}
-
-#[inline]
-const fn is_hex_digit(c: char) -> bool {
-    c.is_ascii_hexdigit()
 }
 
 // -----------------------------------------------------------------------------

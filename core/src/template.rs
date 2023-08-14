@@ -9,7 +9,7 @@ use crate::{
     template::component::Component,
     value::Values,
     Expand,
-    Parse,
+    TryParse,
 };
 
 // =============================================================================
@@ -28,9 +28,9 @@ impl<'a> Template<'a> {
     }
 }
 
-impl<'a> Parse<'a> for Template<'a> {
-    fn parse(raw: &'a str) -> Result<(usize, Self)> {
-        Vec::<Component<'a>>::parse(raw)
+impl<'a> TryParse<'a> for Template<'a> {
+    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
+        Vec::<Component<'a>>::try_parse(raw)
             .map(|(_, components)| (raw.len(), Self::new(raw, components)))
     }
 }

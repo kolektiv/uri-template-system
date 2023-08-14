@@ -12,7 +12,7 @@ use crate::{
         Value,
         Values,
     },
-    Parse,
+    TryParse,
 };
 
 // =============================================================================
@@ -23,10 +23,10 @@ use crate::{
 
 pub type VarSpec<'a> = (VarName<'a>, Option<Modifier<'a>>);
 
-impl<'a> Parse<'a> for VarSpec<'a> {
-    fn parse(raw: &'a str) -> Result<(usize, Self)> {
-        VarName::parse(raw).and_then(|(position_a, varname)| {
-            Option::<Modifier>::parse(&raw[position_a..]).and_then(|(position_b, modifier)| {
+impl<'a> TryParse<'a> for VarSpec<'a> {
+    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
+        VarName::try_parse(raw).and_then(|(position_a, varname)| {
+            Option::<Modifier>::try_parse(&raw[position_a..]).and_then(|(position_b, modifier)| {
                 Ok((position_a + position_b, (varname, modifier)))
             })
         })

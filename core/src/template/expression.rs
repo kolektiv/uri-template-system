@@ -17,6 +17,7 @@ use crate::{
     value::Values,
     Expand,
     Parse,
+    TryParse,
 };
 
 // =============================================================================
@@ -40,8 +41,8 @@ impl<'a> Expression<'a> {
     }
 }
 
-impl<'a> Parse<'a> for Expression<'a> {
-    fn parse(raw: &'a str) -> Result<(usize, Self)> {
+impl<'a> TryParse<'a> for Expression<'a> {
+    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut parsed_operator = None;
         let mut parsed_variable_list = Vec::new();
         let mut state = State::default();
@@ -54,14 +55,13 @@ impl<'a> Parse<'a> for Expression<'a> {
                 }
                 Next::Opening => return Err(Error::msg("expr: expected opening brace")),
                 Next::Operator => match Option::<Operator>::parse(&raw[state.position..]) {
-                    Ok((position, operator)) => {
+                    (position, operator) => {
                         parsed_operator = operator;
                         state.next = Next::VariableList;
                         state.position += position;
                     }
-                    Err(err) => return Err(err),
                 },
-                Next::VariableList => match VariableList::parse(&raw[state.position..]) {
+                Next::VariableList => match VariableList::try_parse(&raw[state.position..]) {
                     Ok((position, variable_list)) => {
                         parsed_variable_list.extend(variable_list);
                         state.next = Next::Closing;

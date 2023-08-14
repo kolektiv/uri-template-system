@@ -3,8 +3,6 @@ mod op_level_2;
 mod op_level_3;
 mod op_reserve;
 
-use anyhow::Result;
-
 use crate::{
     template::expression::{
         operator::{
@@ -41,8 +39,8 @@ pub enum Operator<'a> {
 
 #[rustfmt::skip]
 impl<'a> Parse<'a> for Option<Operator<'a>> {
-    fn parse(raw: &'a str) -> Result<(usize, Self)> {
-        Ok(raw.chars().next().and_then(|c| {
+    fn parse(raw: &'a str) -> (usize, Self) {
+        raw.chars().next().and_then(|c| {
             let operator = match c {
                 '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(&raw[..1])))),
                 '#' => Some(Operator::Level2(OpLevel2::Fragment(Fragment::new(&raw[..1])))),
@@ -56,7 +54,7 @@ impl<'a> Parse<'a> for Option<Operator<'a>> {
 
             operator.map(|operator| (1, Some(operator)))
         })
-        .unwrap_or((0, None)))
+        .unwrap_or((0, None))
     }
 }
 

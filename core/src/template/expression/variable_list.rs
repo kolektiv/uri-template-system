@@ -2,13 +2,13 @@ use anyhow::Result;
 
 use crate::{
     template::expression::variable_specification::VarSpec,
-    Parse,
+    TryParse,
 };
 
 pub type VariableList<'a> = Vec<VarSpec<'a>>;
 
-impl<'a> Parse<'a> for VariableList<'a> {
-    fn parse(raw: &'a str) -> Result<(usize, Self)> {
+impl<'a> TryParse<'a> for VariableList<'a> {
+    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
         let mut parsed_varspecs = Self::new();
         let mut state = State::default();
 
@@ -19,7 +19,7 @@ impl<'a> Parse<'a> for VariableList<'a> {
                     state.position += 1;
                 }
                 Next::Comma => return Ok((state.position, parsed_varspecs)),
-                Next::VarSpec => match VarSpec::parse(&raw[state.position..]) {
+                Next::VarSpec => match VarSpec::try_parse(&raw[state.position..]) {
                     Ok((position, varspec)) => {
                         parsed_varspecs.push(varspec);
 
