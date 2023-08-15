@@ -1,14 +1,16 @@
-mod common;
 mod component;
-mod expression;
-mod literal;
+
+use std::fmt::{
+    self,
+    Formatter,
+};
 
 use anyhow::Result;
 
 use crate::{
+    expansion::Expand,
     template::component::Component,
     value::Values,
-    Expand,
     TryParse,
 };
 
@@ -16,42 +18,39 @@ use crate::{
 // Template
 // =============================================================================
 
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
-pub struct Template<'a> {
-    pub components: Vec<Component<'a>>,
-    pub raw: &'a str,
+pub struct Template<'t> {
+    pub components: Vec<Component<'t>>,
+    pub raw: &'t str,
 }
 
-impl<'a> Template<'a> {
-    fn new(raw: &'a str, components: Vec<Component<'a>>) -> Self {
+impl<'t> Template<'t> {
+    fn new(raw: &'t str, components: Vec<Component<'t>>) -> Self {
         Self { components, raw }
     }
 }
 
-impl<'a> TryParse<'a> for Template<'a> {
-    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
-        Vec::<Component<'a>>::try_parse(raw)
+// -----------------------------------------------------------------------------
+
+// Parse
+
+impl<'t> TryParse<'t> for Template<'t> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+        Vec::<Component<'t>>::try_parse(raw)
             .map(|(_, components)| (raw.len(), Self::new(raw, components)))
     }
 }
 
 // -----------------------------------------------------------------------------
 
-// Expansion
+// Expand
 
-impl<'a> Expand<Values, ()> for Template<'a> {
-    fn expand(&self, output: &mut String, values: &Values, context: &()) {
+impl<'t> Expand for Template<'t> {
+    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
         self.components
             .iter()
-            .for_each(|component| component.expand(output, values, context));
+            .try_for_each(|component| component.expand(values, f))
     }
 }
-
-// -----------------------------------------------------------------------------
-
-// Re-Exports
-
-pub use self::{
-    expression::*,
-    literal::*,
-};

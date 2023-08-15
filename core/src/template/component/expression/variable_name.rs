@@ -12,13 +12,19 @@ use crate::{
     TryParse,
 };
 
+// =============================================================================
+// Variable Name
+// =============================================================================
+
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
-pub struct VarName<'a> {
-    raw: &'a str,
+pub struct VarName<'t> {
+    raw: &'t str,
 }
 
-impl<'a> VarName<'a> {
-    const fn new(raw: &'a str) -> Self {
+impl<'t> VarName<'t> {
+    const fn new(raw: &'t str) -> Self {
         Self { raw }
     }
 
@@ -27,9 +33,13 @@ impl<'a> VarName<'a> {
     }
 }
 
-impl<'a> TryParse<'a> for VarName<'a> {
+// -----------------------------------------------------------------------------
+
+// Parse
+
+impl<'t> TryParse<'t> for VarName<'t> {
     // TODO: Experiment with ordering for perf?
-    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
         let mut state = State::default();
 
         loop {
@@ -41,20 +51,20 @@ impl<'a> TryParse<'a> for VarName<'a> {
                 Next::Dot => {
                     return Ok((state.position, VarName::new(&raw[..state.position])));
                 }
-                Next::VarChars => {
-                    match (Ascii::new(is_varchar_ascii), PercentEncoded)
-                        .matches(&raw[state.position..])
-                    {
-                        0 => return Err(Error::msg("varname: expected valid char(s)")),
-                        n => {
-                            state.position += n;
-                            state.next = Next::Dot;
-                        }
+                Next::VarChars => match parse_matcher().matches(&raw[state.position..]) {
+                    0 => return Err(Error::msg("varname: expected valid char(s)")),
+                    n => {
+                        state.position += n;
+                        state.next = Next::Dot;
                     }
-                }
+                },
             }
         }
     }
+}
+
+const fn parse_matcher() -> impl Matcher {
+    (Ascii::new(is_varchar_ascii), PercentEncoded)
 }
 
 #[derive(Default)]
@@ -70,10 +80,10 @@ enum Next {
     VarChars,
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
+#[allow(clippy::match_like_matches_macro)]
 #[inline]
-fn is_varchar_ascii(b: u8) -> bool {
+const fn is_varchar_ascii(b: u8) -> bool {
     match b {
         | b'\x61'..=b'\x7a' // a..z
         | b'\x41'..=b'\x5a' // A..Z

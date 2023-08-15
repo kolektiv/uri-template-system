@@ -5,13 +5,13 @@
 // Types
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Prefix<'a> {
+pub struct Prefix<'t> {
     length: usize,
-    raw: &'a str,
+    raw: &'t str,
 }
 
-impl<'a> Prefix<'a> {
-    pub fn new(raw: &'a str, length: usize) -> Self {
+impl<'t> Prefix<'t> {
+    pub fn new(raw: &'t str, length: usize) -> Self {
         Self { length, raw }
     }
 

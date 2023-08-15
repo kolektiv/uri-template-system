@@ -1,19 +1,26 @@
+use std::fmt::{
+    self,
+    Formatter,
+};
+
 use anyhow::{
     Error,
     Result,
 };
 
 use crate::{
-    codec::Encode,
     common::matcher::{
         Ascii,
         Matcher,
         PercentEncoded,
         Unicode,
     },
-    template::common,
+    expansion::Expand,
+    template::component::{
+        self,
+        EncodeExt,
+    },
     value::Values,
-    Expand,
     TryParse,
 };
 
@@ -22,51 +29,53 @@ use crate::{
 // =============================================================================
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Literal<'a> {
-    raw: &'a str,
+pub struct Literal<'t> {
+    raw: &'t str,
 }
 
-impl<'a> Literal<'a> {
-    const fn new(raw: &'a str) -> Self {
+impl<'t> Literal<'t> {
+    const fn new(raw: &'t str) -> Self {
         Self { raw }
     }
 }
 
-impl<'a> TryParse<'a> for Literal<'a> {
-    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
-        match (
-            Ascii::new(is_literal_ascii),
-            PercentEncoded,
-            Unicode::new(is_literal_unicode),
-        )
-            .matches(raw)
-        {
+impl<'t> TryParse<'t> for Literal<'t> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+        match parse_matcher().matches(raw) {
             0 => Err(Error::msg("lit: expected valid char(s)")),
             n => Ok((n, Literal::new(&raw[..n]))),
         }
     }
 }
 
-#[allow(clippy::match_like_matches_macro)]
+const fn parse_matcher() -> impl Matcher {
+    (
+        Ascii::new(is_literal_ascii),
+        PercentEncoded,
+        Unicode::new(is_literal_unicode),
+    )
+}
+
 #[rustfmt::skip]
+#[allow(clippy::match_like_matches_macro)]
 #[inline]
 fn is_literal_ascii(b: u8) -> bool {
     match b {
         | b'\x61'..=b'\x7a' // a..z
         | b'\x3f'..=b'\x5b' // ?, @, A..Z, [
         | b'\x26'..=b'\x3b' // &, ', (, ),*, +, ,, -, -, ., /, 0..9, :, ;,
-        | b'\x21'
-        | b'\x23'..=b'\x24'
-        | b'\x3d'
-        | b'\x5d'
-        | b'\x5f'
-        | b'\x7e' => true,
+        | b'\x21'           // !
+        | b'\x23'..=b'\x24' // #, $
+        | b'\x3d'           // =
+        | b'\x5d'           // ]
+        | b'\x5f'           // _
+        | b'\x7e' => true,  // ~
         _ => false
     }
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
+#[allow(clippy::match_like_matches_macro)]
 #[inline]
 fn is_literal_unicode(c: char) -> bool {
     match c {
@@ -98,8 +107,15 @@ fn is_literal_unicode(c: char) -> bool {
 
 // Expansion
 
-impl<'a> Expand<Values, ()> for Literal<'a> {
-    fn expand(&self, output: &mut String, _values: &Values, _context: &()) {
-        output.push_str_encode(self.raw, common::reserved());
+impl<'t> Expand for Literal<'t> {
+    fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str_encoded(self.raw, &encode_matcher())
     }
+}
+
+pub const fn encode_matcher() -> impl Matcher {
+    (
+        Ascii::new(|b| component::is_unreserved_ascii(b) || component::is_reserved_ascii(b)),
+        PercentEncoded,
+    )
 }

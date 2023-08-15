@@ -1,10 +1,8 @@
-mod none;
 mod op_level_2;
 mod op_level_3;
-mod op_reserve;
 
 use crate::{
-    template::expression::{
+    template::component::expression::{
         operator::{
             op_level_2::{
                 fragment::Fragment,
@@ -20,10 +18,8 @@ use crate::{
                 OpLevel3,
             },
         },
-        variable_list::VariableList,
+        Behaviour,
     },
-    value::Values,
-    Expand,
     Parse,
 };
 
@@ -31,15 +27,21 @@ use crate::{
 // Operator
 // =============================================================================
 
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
-pub enum Operator<'a> {
-    Level2(OpLevel2<'a>),
-    Level3(OpLevel3<'a>),
+pub enum Operator<'t> {
+    Level2(OpLevel2<'t>),
+    Level3(OpLevel3<'t>),
 }
 
+// -----------------------------------------------------------------------------
+
+// Parse
+
 #[rustfmt::skip]
-impl<'a> Parse<'a> for Option<Operator<'a>> {
-    fn parse(raw: &'a str) -> (usize, Self) {
+impl<'t> Parse<'t> for Option<Operator<'t>> {
+    fn parse(raw: &'t str) -> (usize, Self) {
         raw.chars().next().and_then(|c| {
             let operator = match c {
                 '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(&raw[..1])))),
@@ -60,22 +62,13 @@ impl<'a> Parse<'a> for Option<Operator<'a>> {
 
 // -----------------------------------------------------------------------------
 
-// Expansion
+// Expand
 
-impl<'a> Expand<Values, VariableList<'a>> for Option<Operator<'a>> {
-    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
+impl<'t> Operator<'t> {
+    pub fn behaviour(&self) -> &Behaviour {
         match self {
-            Some(operator) => operator.expand(output, values, variable_list),
-            _ => none::None.expand(output, values, variable_list),
-        }
-    }
-}
-
-impl<'a> Expand<Values, VariableList<'a>> for Operator<'a> {
-    fn expand(&self, output: &mut String, values: &Values, variable_list: &VariableList<'a>) {
-        match self {
-            Self::Level2(operator) => operator.expand(output, values, variable_list),
-            Self::Level3(operator) => operator.expand(output, values, variable_list),
+            Self::Level2(op_level_2) => op_level_2.behaviour(),
+            Self::Level3(op_level_3) => op_level_3.behaviour(),
         }
     }
 }

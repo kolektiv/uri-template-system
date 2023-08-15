@@ -8,6 +8,12 @@ pub trait Matcher {
     fn matches(&self, input: &str) -> usize;
 }
 
+impl Matcher for Box<dyn Matcher> {
+    fn matches(&self, input: &str) -> usize {
+        self.as_ref().matches(input)
+    }
+}
+
 // =============================================================================
 // Matchers
 // =============================================================================

@@ -1,12 +1,14 @@
-mod codec;
 mod common;
+mod expansion;
 mod template;
 mod value;
 
 use anyhow::Result;
-use fnv::FnvBuildHasher;
 
-use crate::template::Template;
+use crate::{
+    expansion::Expansion,
+    template::Template,
+};
 
 // =============================================================================
 // URI Template
@@ -18,44 +20,36 @@ trait Expand<V, C> {
     fn expand(&self, output: &mut String, value: &V, context: &C);
 }
 
-trait Parse<'a>
+trait Parse<'t>
 where
     Self: Sized,
 {
-    fn parse(raw: &'a str) -> (usize, Self);
+    fn parse(raw: &'t str) -> (usize, Self);
 }
 
-trait TryParse<'a>
+trait TryParse<'t>
 where
     Self: Sized,
 {
-    fn try_parse(raw: &'a str) -> Result<(usize, Self)>;
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)>;
 }
 
 // -----------------------------------------------------------------------------
 
 // Types
 
-// TODO: Don't leak this implementation detail
-pub type IndexMap<K, V> = indexmap::IndexMap<K, V, FnvBuildHasher>;
-
 #[derive(Debug, Eq, PartialEq)]
-pub struct URITemplate<'a> {
-    template: Template<'a>,
+pub struct URITemplate<'t> {
+    template: Template<'t>,
 }
 
-impl<'a> URITemplate<'a> {
-    pub fn parse(raw: &'a str) -> Result<Self> {
-        Template::try_parse(raw).map(|(_, template)| Self { template })
+impl<'t> URITemplate<'t> {
+    pub fn expand<'e>(&'e self, values: &'e Values) -> Expansion<'e, 't> {
+        Expansion::new(&self.template, values)
     }
 
-    pub fn expand(&self, values: &Values) -> String {
-        let mut output = String::new();
-        let values = values.defined();
-
-        self.template.expand(&mut output, &values, &());
-
-        output
+    pub fn parse(raw: &'t str) -> Result<Self> {
+        Template::try_parse(raw).map(|(_, template)| Self { template })
     }
 }
 

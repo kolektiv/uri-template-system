@@ -7,21 +7,31 @@ use anyhow::{
 };
 
 use crate::{
-    template::expression::modifier::{
+    template::component::expression::modifier::{
         explode::Explode,
         prefix::Prefix,
     },
     TryParse,
 };
 
+// =============================================================================
+// Modifier
+// =============================================================================
+
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
-pub enum Modifier<'a> {
-    Explode(Explode<'a>),
-    Prefix(Prefix<'a>),
+pub enum Modifier<'t> {
+    Explode(Explode<'t>),
+    Prefix(Prefix<'t>),
 }
 
-impl<'a> TryParse<'a> for Option<Modifier<'a>> {
-    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
+// -----------------------------------------------------------------------------
+
+// Parse
+
+impl<'t> TryParse<'t> for Option<Modifier<'t>> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
         let mut state = State::default();
 
         loop {
@@ -80,20 +90,22 @@ enum Next {
     TrailingDigit,
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_digit(c: char) -> bool {
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_digit(c: char) -> bool {
     match c {
-        | '\u{000030}'..='\u{000039}' => true,
+        | '\x30'..='\x39' => true, // 0..9
         _ => false,
     }
 }
 
-#[allow(clippy::match_like_matches_macro)]
 #[rustfmt::skip]
-fn is_non_zero_digit(c: char) -> bool {
+#[allow(clippy::match_like_matches_macro)]
+#[inline]
+const fn is_non_zero_digit(c: char) -> bool {
     match c {
-        | '\u{000031}'..='\u{000039}' => true,
+        | '\x31'..='\x39' => true, // 1..9
         _ => false,
     }
 }

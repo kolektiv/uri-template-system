@@ -1,14 +1,24 @@
 use anyhow::Result;
 
 use crate::{
-    template::expression::variable_specification::VarSpec,
+    template::component::expression::variable_specification::VarSpec,
     TryParse,
 };
 
-pub type VariableList<'a> = Vec<VarSpec<'a>>;
+// =============================================================================
+// Variable List
+// =============================================================================
 
-impl<'a> TryParse<'a> for VariableList<'a> {
-    fn try_parse(raw: &'a str) -> Result<(usize, Self)> {
+// Types
+
+pub type VariableList<'t> = Vec<VarSpec<'t>>;
+
+// -----------------------------------------------------------------------------
+
+// Parse
+
+impl<'t> TryParse<'t> for VariableList<'t> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
         let mut parsed_varspecs = Self::new();
         let mut state = State::default();
 

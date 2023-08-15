@@ -3,12 +3,12 @@
 // =============================================================================
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Explode<'a> {
-    raw: &'a str,
+pub struct Explode<'t> {
+    raw: &'t str,
 }
 
-impl<'a> Explode<'a> {
-    pub fn new(raw: &'a str) -> Self {
+impl<'t> Explode<'t> {
+    pub fn new(raw: &'t str) -> Self {
         Self { raw }
     }
 }
