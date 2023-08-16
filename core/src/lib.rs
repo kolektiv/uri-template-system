@@ -16,10 +16,6 @@ use crate::{
 
 // Traits
 
-trait Expand<V, C> {
-    fn expand(&self, output: &mut String, value: &V, context: &C);
-}
-
 trait Parse<'t>
 where
     Self: Sized,
