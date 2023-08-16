@@ -1,31 +1,31 @@
 // =============================================================================
-// Matcher
+// Satisfy
 // =============================================================================
 
 // Traits
 
-pub trait Matcher {
-    fn matches(&self, input: &str) -> usize;
+pub trait Satisfier {
+    fn satisfies(&self, input: &str) -> usize;
 }
 
-impl Matcher for Box<dyn Matcher> {
-    fn matches(&self, input: &str) -> usize {
-        self.as_ref().matches(input)
+impl Satisfier for Box<dyn Satisfier> {
+    fn satisfies(&self, input: &str) -> usize {
+        self.as_ref().satisfies(input)
     }
 }
 
 // =============================================================================
-// Matchers
+// Implementation
 // =============================================================================
 
 // Composites
 
-impl<M1, M2> Matcher for (M1, M2)
+impl<S1, S2> Satisfier for (S1, S2)
 where
-    M1: Matcher,
-    M2: Matcher,
+    S1: Satisfier,
+    S2: Satisfier,
 {
-    fn matches(&self, input: &str) -> usize {
+    fn satisfies(&self, input: &str) -> usize {
         let mut pos = 0;
         let mut exhausted = (true, true);
 
@@ -35,7 +35,7 @@ where
             }
 
             if exhausted.0 {
-                match self.0.matches(&input[pos..]) {
+                match self.0.satisfies(&input[pos..]) {
                     n if n > 0 => {
                         pos += n;
                         exhausted.1 = true;
@@ -47,7 +47,7 @@ where
             }
 
             if exhausted.1 {
-                match self.1.matches(&input[pos..]) {
+                match self.1.satisfies(&input[pos..]) {
                     n if n > 0 => {
                         pos += n;
                         exhausted.0 = true;
@@ -67,13 +67,13 @@ where
     }
 }
 
-impl<M1, M2, M3> Matcher for (M1, M2, M3)
+impl<S1, S2, S3> Satisfier for (S1, S2, S3)
 where
-    M1: Matcher,
-    M2: Matcher,
-    M3: Matcher,
+    S1: Satisfier,
+    S2: Satisfier,
+    S3: Satisfier,
 {
-    fn matches(&self, input: &str) -> usize {
+    fn satisfies(&self, input: &str) -> usize {
         let mut pos = 0;
         let mut exhausted = (true, true, true);
 
@@ -83,7 +83,7 @@ where
             }
 
             if exhausted.1 {
-                match self.0.matches(&input[pos..]) {
+                match self.0.satisfies(&input[pos..]) {
                     n if n > 0 => {
                         pos += n;
                         exhausted.1 = true;
@@ -96,7 +96,7 @@ where
             }
 
             if exhausted.1 {
-                match self.1.matches(&input[pos..]) {
+                match self.1.satisfies(&input[pos..]) {
                     n if n > 0 => {
                         pos += n;
                         exhausted.0 = true;
@@ -109,7 +109,7 @@ where
             }
 
             if exhausted.2 {
-                match self.2.matches(&input[pos..]) {
+                match self.2.satisfies(&input[pos..]) {
                     n if n > 0 => {
                         pos += n;
                         exhausted.0 = true;
@@ -150,11 +150,11 @@ where
     }
 }
 
-impl<P> Matcher for Ascii<P>
+impl<P> Satisfier for Ascii<P>
 where
     P: Fn(u8) -> bool,
 {
-    fn matches(&self, input: &str) -> usize {
+    fn satisfies(&self, input: &str) -> usize {
         input
             .bytes()
             .position(|b| !b.is_ascii() || !(self.predicate)(b))
@@ -182,11 +182,11 @@ where
     }
 }
 
-impl<P> Matcher for Unicode<P>
+impl<P> Satisfier for Unicode<P>
 where
     P: Fn(char) -> bool,
 {
-    fn matches(&self, input: &str) -> usize {
+    fn satisfies(&self, input: &str) -> usize {
         input
             .chars()
             .position(|c| c.is_ascii() || !(self.predicate)(c))
@@ -201,8 +201,8 @@ where
 
 pub struct PercentEncoded;
 
-impl Matcher for PercentEncoded {
-    fn matches(&self, input: &str) -> usize {
+impl Satisfier for PercentEncoded {
+    fn satisfies(&self, input: &str) -> usize {
         let mut pos = 0;
 
         loop {
