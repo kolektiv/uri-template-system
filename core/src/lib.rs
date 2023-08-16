@@ -17,25 +17,6 @@ use crate::{
 // URI Template
 // =============================================================================
 
-// Macros
-
-macro_rules! simple {
-    ($name:ident) => {
-        #[derive(Debug, Eq, PartialEq)]
-        pub struct $name<'t> {
-            raw: &'t str,
-        }
-
-        impl<'t> $name<'t> {
-            pub const fn new(raw: &'t str) -> Self {
-                Self { raw }
-            }
-        }
-    };
-}
-
-// -----------------------------------------------------------------------------
-
 // Types
 
 #[derive(Debug, Eq, PartialEq)]
@@ -113,6 +94,20 @@ pub enum Operator<'t> {
     Level2(OpLevel2<'t>),
     Level3(OpLevel3<'t>),
 }
+macro_rules! operator {
+    ($name:ident) => {
+        #[derive(Debug, Eq, PartialEq)]
+        pub struct $name<'t> {
+            raw: &'t str,
+        }
+
+        impl<'t> $name<'t> {
+            pub const fn new(raw: &'t str) -> Self {
+                Self { raw }
+            }
+        }
+    };
+}
 
 // Operator - Level 2
 
@@ -122,8 +117,8 @@ pub enum OpLevel2<'t> {
     Reserved(Reserved<'t>),
 }
 
-simple!(Fragment);
-simple!(Reserved);
+operator!(Fragment);
+operator!(Reserved);
 
 // Operator - Level 3
 
@@ -136,23 +131,23 @@ pub enum OpLevel3<'t> {
     QueryContinuation(QueryContinuation<'t>),
 }
 
-simple!(Label);
-simple!(Path);
-simple!(PathParameter);
-simple!(Query);
-simple!(QueryContinuation);
+operator!(Label);
+operator!(Path);
+operator!(PathParameter);
+operator!(Query);
+operator!(QueryContinuation);
 
 // -----------------------------------------------------------------------------
 
-simple!(Literal);
-
-// -----------------------------------------------------------------------------
-
-// Variable
+// Variable - List
 
 pub type VariableList<'t> = Vec<VariableSpecification<'t>>;
 
+// Variable - Specification
+
 pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier<'t>>);
+
+// Variable - Name
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct VariableName<'t> {
@@ -181,7 +176,7 @@ pub enum Modifier<'t> {
 
 // Modifier - Explode
 
-simple!(Explode);
+operator!(Explode);
 
 // Modifier - Prefix
 
@@ -198,6 +193,21 @@ impl<'t> Prefix<'t> {
 
     pub fn length(&self) -> usize {
         self.length
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Literal
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Literal<'t> {
+    raw: &'t str,
+}
+
+impl<'t> Literal<'t> {
+    pub const fn new(raw: &'t str) -> Self {
+        Self { raw }
     }
 }
 
@@ -224,7 +234,7 @@ impl FromIterator<(String, Value)> for Values {
     }
 }
 
-// Values - Value
+// Value
 
 #[derive(Clone, Debug)]
 pub enum Value {
