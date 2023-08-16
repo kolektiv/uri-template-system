@@ -100,15 +100,15 @@ pub struct Behaviour {
 
 #[derive(Debug)]
 pub enum Allow {
-    Unreserved,
-    UnreservedAndReserved,
+    U,
+    UR,
 }
 
 impl Allow {
     pub fn matcher(&self) -> Box<dyn Satisfier> {
         match self {
-            Self::Unreserved => return Box::new(Ascii::new(|b| encode::is_unreserved_ascii(b))),
-            Self::UnreservedAndReserved => {
+            Self::U => return Box::new(Ascii::new(|b| encode::is_unreserved_ascii(b))),
+            Self::UR => {
                 return Box::new((
                     Ascii::new(|b| encode::is_unreserved_ascii(b) || encode::is_reserved_ascii(b)),
                     PercentEncoded,
@@ -408,75 +408,35 @@ impl<'t> Operator<'t> {
     }
 }
 
+macro_rules! behaviour {
+    ($name:ident, $first:stmt, $sep:literal, $named:literal, $ifemp:stmt, $allow:ty) => {
+        paste::paste! {
+            static [< $name:snake:upper _BEHAVIOUR >]: Behaviour = Behaviour {
+                first: $first,
+                sep: $sep,
+                named: $named,
+                ifemp: $ifemp,
+                allow: $allow
+            };
+        }
+    };
+}
 // Operator - None
 
-static DEFAULT_BEHAVIOUR: Behaviour = Behaviour {
-    first: None,
-    sep: ',',
-    named: false,
-    ifemp: None,
-    allow: Allow::Unreserved,
-};
+behaviour!(Default, None, ',', false, None, Allow::U);
 
 // Operator - Level 2
 
-static FRAGMENT_BEHAVIOUR: Behaviour = Behaviour {
-    first: Some('#'),
-    sep: ',',
-    named: false,
-    ifemp: None,
-    allow: Allow::UnreservedAndReserved,
-};
-
-static RESERVED_BEHAVIOUR: Behaviour = Behaviour {
-    first: None,
-    sep: ',',
-    named: false,
-    ifemp: None,
-    allow: Allow::UnreservedAndReserved,
-};
+behaviour!(Fragment, Some('#'), ',', false, None, Allow::UR);
+behaviour!(Reserved, None, ',', false, None, Allow::UR);
 
 // Operator - Level 3
 
-static LABEL_BEHAVIOUR: Behaviour = Behaviour {
-    first: Some('.'),
-    sep: '.',
-    named: false,
-    ifemp: None,
-    allow: Allow::Unreserved,
-};
-
-static PATH_BEHAVIOUR: Behaviour = Behaviour {
-    first: Some('/'),
-    sep: '/',
-    named: false,
-    ifemp: None,
-    allow: Allow::Unreserved,
-};
-
-static PATH_PARAMETER_BEHAVIOUR: Behaviour = Behaviour {
-    first: Some(';'),
-    sep: ';',
-    named: true,
-    ifemp: None,
-    allow: Allow::Unreserved,
-};
-
-static QUERY_BEHAVIOUR: Behaviour = Behaviour {
-    first: Some('?'),
-    sep: '&',
-    named: true,
-    ifemp: Some('='),
-    allow: Allow::Unreserved,
-};
-
-static QUERY_CONTINUATION_BEHAVIOUR: Behaviour = Behaviour {
-    first: Some('&'),
-    sep: '&',
-    named: true,
-    ifemp: Some('='),
-    allow: Allow::Unreserved,
-};
+behaviour!(Label, Some('.'), '.', false, None, Allow::U);
+behaviour!(Path, Some('/'), '/', false, None, Allow::U);
+behaviour!(PathParameter, Some(';'), ';', true, None, Allow::U);
+behaviour!(Query, Some('?'), '&', true, Some('='), Allow::U);
+behaviour!(QueryContinuation, Some('&'), '&', true, Some('='), Allow::U);
 
 // -----------------------------------------------------------------------------
 
