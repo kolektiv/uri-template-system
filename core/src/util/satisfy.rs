@@ -29,7 +29,7 @@ impl Satisfy for Box<dyn Satisfy> {
 // Standards
 
 pub fn unreserved() -> impl Satisfy {
-    Ascii::new(|b| is_unreserved_ascii(b))
+    Ascii::new(is_unreserved_ascii)
 }
 
 pub fn unreserved_or_reserved() -> impl Satisfy {

@@ -19,10 +19,13 @@ use crate::{
 
 // Types
 
+#[allow(clippy::module_name_repetitions)]
 pub type VariableList<'t> = Vec<VariableSpecification<'t>>;
 
+#[allow(clippy::module_name_repetitions)]
 pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier<'t>>);
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Eq, PartialEq)]
 pub struct VariableName<'t> {
     raw: &'t str,
@@ -33,7 +36,7 @@ impl<'t> VariableName<'t> {
         Self { raw }
     }
 
-    pub fn name(&self) -> &str {
+    pub const fn name(&self) -> &str {
         self.raw
     }
 }
@@ -92,9 +95,8 @@ enum VariableListNext {
 impl<'t> TryParse<'t> for VariableSpecification<'t> {
     fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
         VariableName::try_parse(raw).and_then(|(position_a, variable_name)| {
-            Option::<Modifier>::try_parse(&raw[position_a..]).and_then(|(position_b, modifier)| {
-                Ok((position_a + position_b, (variable_name, modifier)))
-            })
+            Option::<Modifier>::try_parse(&raw[position_a..])
+                .map(|(position_b, modifier)| (position_a + position_b, (variable_name, modifier)))
         })
     }
 }

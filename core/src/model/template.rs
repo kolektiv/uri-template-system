@@ -34,8 +34,9 @@ pub struct Template<'t> {
 }
 
 impl<'t> Template<'t> {
-    pub fn expand<'e>(&'e self, values: &'e Values) -> Expansion<'e, 't> {
-        Expansion::new(&self, values)
+    #[must_use]
+    pub const fn expand<'e>(&'e self, values: &'e Values) -> Expansion<'e, 't> {
+        Expansion::new(self, values)
     }
 
     pub fn parse(raw: &'t str) -> Result<Self> {

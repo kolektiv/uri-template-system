@@ -14,6 +14,7 @@ pub struct Values {
 }
 
 impl Values {
+    #[must_use]
     pub fn get(&self, key: &str) -> Option<&Value> {
         self.values.get(key)
     }
@@ -35,6 +36,7 @@ pub enum Value {
 }
 
 impl Value {
+    #[must_use]
     pub fn defined(&self) -> bool {
         match self {
             Self::AssociativeArray(value) if value.is_empty() => false,

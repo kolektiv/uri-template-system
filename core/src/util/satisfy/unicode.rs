@@ -30,7 +30,9 @@ where
         input
             .chars()
             .position(|c| c.is_ascii() || !(self.predicate)(c))
-            .map(|p| (p..).find(|p| input.is_char_boundary(*p)).unwrap())
-            .unwrap_or_else(|| input.len())
+            .map_or_else(
+                || input.len(),
+                |p| (p..p + 4).find(|p| input.is_char_boundary(*p)).unwrap(),
+            )
     }
 }

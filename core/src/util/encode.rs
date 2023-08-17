@@ -33,7 +33,7 @@ where
                 0 => {
                     if let Some(c) = rest.chars().next() {
                         for b in c.encode_utf8(&mut [0; 4]).bytes() {
-                            self.write_fmt(format_args!("%{:02X}", b))?;
+                            self.write_fmt(format_args!("%{b:02X}"))?;
 
                             position += 1;
                         }
