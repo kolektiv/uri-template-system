@@ -4,7 +4,7 @@ project_name := file_name(justfile_directory())
 
 doc *args:
     #!/usr/bin/env bash
-    cargo doc --workspace --no-deps {{args}}
+    cargo doc -p uri-template-system --no-deps {{args}}
 
 test *args:
     #!/usr/bin/env bash

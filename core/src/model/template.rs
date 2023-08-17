@@ -8,16 +8,16 @@ use std::fmt::{
 use anyhow::Result;
 
 use crate::{
-    action::{
+    model::{
+        template::component::Component,
+        value::Values,
+    },
+    process::{
         expand::{
             Expand,
             Expansion,
         },
         parse::TryParse,
-    },
-    model::{
-        template::component::Component,
-        value::Values,
     },
 };
 

@@ -9,21 +9,21 @@ use anyhow::{
 };
 
 use crate::{
-    action::{
-        encode::{
-            self,
-            Encode,
-        },
+    model::value::Values,
+    process::{
         expand::Expand,
         parse::TryParse,
+    },
+    util::{
+        encode::Encode,
         satisfy::{
-            Ascii,
-            PercentEncoded,
+            self,
+            ascii::Ascii,
+            percent_encoded::PercentEncoded,
+            unicode::Unicode,
             Satisfy,
-            Unicode,
         },
     },
-    Values,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -37,18 +37,9 @@ impl<'t> Literal<'t> {
     }
 }
 
-impl<'t> Literal<'t> {
-    pub const fn expansion() -> impl Satisfy {
-        (
-            Ascii::new(|b| encode::is_unreserved_ascii(b) || encode::is_reserved_ascii(b)),
-            PercentEncoded,
-        )
-    }
-}
-
 impl<'t> Expand for Literal<'t> {
     fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
-        f.encode(self.raw, &Self::expansion())
+        f.encode(self.raw, &satisfy::unreserved_or_reserved())
     }
 }
 

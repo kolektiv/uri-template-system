@@ -1,9 +1,9 @@
 use crate::{
-    action::parse::Parse,
     model::template::component::expression::{
         Allow,
         Behaviour,
     },
+    process::parse::Parse,
 };
 
 // Operator

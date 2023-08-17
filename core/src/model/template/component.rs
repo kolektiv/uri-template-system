@@ -9,13 +9,13 @@ use std::fmt::{
 use anyhow::Result;
 
 use crate::{
-    action::{
-        expand::Expand,
-        parse::TryParse,
-    },
     model::template::component::{
         expression::Expression,
         literal::Literal,
+    },
+    process::{
+        expand::Expand,
+        parse::TryParse,
     },
     Values,
 };

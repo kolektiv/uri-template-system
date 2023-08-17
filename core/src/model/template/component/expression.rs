@@ -14,34 +14,29 @@ use anyhow::{
 };
 
 use crate::{
-    action::{
-        encode::{
-            self,
-            Encode,
+    model::{
+        template::component::expression::{
+            modifier::Modifier,
+            operator::Operator,
+            variable::VariableList,
         },
+        value::{
+            Value,
+            Values,
+        },
+    },
+    process::{
         expand::Expand,
         parse::{
             Parse,
             TryParse,
         },
-        satisfy::{
-            Ascii,
-            PercentEncoded,
-            Satisfy,
-        },
     },
-    model::{
-        template::component::{
-            expression::{
-                modifier::Modifier,
-                operator::Operator,
-                variable::VariableList,
-            },
-            literal::Literal,
-        },
-        value::{
-            Value,
-            Values,
+    util::{
+        encode::Encode,
+        satisfy::{
+            self,
+            Satisfy,
         },
     },
 };
@@ -85,13 +80,8 @@ pub enum Allow {
 impl Allow {
     pub fn matcher(&self) -> Box<dyn Satisfy> {
         match self {
-            Self::U => return Box::new(Ascii::new(|b| encode::is_unreserved_ascii(b))),
-            Self::UR => {
-                return Box::new((
-                    Ascii::new(|b| encode::is_unreserved_ascii(b) || encode::is_reserved_ascii(b)),
-                    PercentEncoded,
-                ));
-            }
+            Self::U => return Box::new(satisfy::unreserved()),
+            Self::UR => return Box::new(satisfy::unreserved_or_reserved()),
         }
     }
 }
@@ -139,7 +129,7 @@ impl<'t> Expand for Expression<'t> {
                     // * if named is true, append the varname to the result string using the same
                     //   encoding process as for literals, and
 
-                    f.encode(var_name.name(), &Literal::expansion())?;
+                    f.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
 
                     if value.is_empty() {
                         // + if the value is empty, append the ifemp string to the result string and
@@ -202,7 +192,7 @@ impl<'t> Expand for Expression<'t> {
                             // + if this is a pair, append the name to the result string using the
                             //   same encoding process as for literals;
 
-                            f.encode(name, &Literal::expansion())?;
+                            f.encode(name, &satisfy::unreserved_or_reserved())?;
 
                             // + if the member/value is empty, append the ifemp string to the result
                             //   string; otherwise, append "=" and the member/value to the result
@@ -234,7 +224,7 @@ impl<'t> Expand for Expression<'t> {
                             // + if this is a list, append the varname to the result string using
                             //   the same encoding process as for literals;
 
-                            f.encode(var_name.name(), &Literal::expansion())?;
+                            f.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
 
                             // + if the member/value is empty, append the ifemp string to the result
                             //   string; otherwise, append "=" and the member/value to the result
@@ -303,7 +293,7 @@ impl<'t> Expand for Expression<'t> {
                     // * if named is true, append the varname to the result string using the same
                     //   encoding process as for literals, and
 
-                    f.encode(var_name.name(), &Literal::expansion())?;
+                    f.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
 
                     // + if the value is empty, append the ifemp string to the result string and
                     //   skip to the next varspec;

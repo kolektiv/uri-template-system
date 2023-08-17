@@ -5,7 +5,7 @@ use anyhow::{
     Result,
 };
 
-use crate::action::parse::TryParse;
+use crate::process::parse::TryParse;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Modifier<'t> {

@@ -1,13 +1,16 @@
-mod action {
-    pub mod encode;
-    pub mod expand;
-    pub mod parse;
-    pub mod satisfy;
-}
-
 mod model {
     pub mod template;
     pub mod value;
+}
+
+mod process {
+    pub mod expand;
+    pub mod parse;
+}
+
+mod util {
+    pub mod encode;
+    pub mod satisfy;
 }
 
 // =============================================================================
@@ -17,7 +20,6 @@ mod model {
 // Re-Exports
 
 pub use crate::{
-    action::expand::Expansion,
     model::{
         template::Template,
         value::{
@@ -25,4 +27,5 @@ pub use crate::{
             Values,
         },
     },
+    process::expand::Expansion,
 };
