@@ -13,6 +13,7 @@ where
     fn parse(raw: &'t str) -> (usize, Self);
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub trait TryParse<'t>
 where
     Self: Sized,

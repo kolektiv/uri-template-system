@@ -39,7 +39,7 @@ impl<'t> Prefix<'t> {
         Self { length, raw }
     }
 
-    pub fn length(&self) -> usize {
+    pub const fn length(&self) -> usize {
         self.length
     }
 }

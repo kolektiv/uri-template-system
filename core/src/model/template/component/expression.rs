@@ -89,13 +89,13 @@ impl<'t> TryParse<'t> for Expression<'t> {
                 ExpressionNext::OpeningBrace => {
                     return Err(Error::msg("expr: expected opening brace"))
                 }
-                ExpressionNext::Operator => match Option::<Operator>::parse(rest) {
-                    (position, operator) => {
-                        parsed_operator = operator;
-                        state.next = ExpressionNext::VariableList;
-                        state.position += position;
-                    }
-                },
+                ExpressionNext::Operator => {
+                    let (position, operator) = Option::<Operator>::parse(rest);
+
+                    parsed_operator = operator;
+                    state.next = ExpressionNext::VariableList;
+                    state.position += position;
+                }
                 ExpressionNext::VariableList => match VariableList::try_parse(rest) {
                     Ok((position, variable_list)) => {
                         parsed_variable_list.extend(variable_list);
@@ -144,12 +144,13 @@ enum ExpressionNext {
 // Expand
 
 impl<'t> Expand for Expression<'t> {
+    #[allow(clippy::cognitive_complexity)] // TODO: Reduce?
+    #[allow(clippy::too_many_lines)]
     fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
         let behaviour = self
             .operator
             .as_ref()
-            .map(|operator| operator.behaviour())
-            .unwrap_or(&operator::DEFAULT_BEHAVIOUR);
+            .map_or(&operator::DEFAULT_BEHAVIOUR, Operator::behaviour);
 
         let matcher = behaviour.allow.matcher();
         let mut first = true;
@@ -214,7 +215,7 @@ impl<'t> Expand for Expression<'t> {
                         let pos: usize = value
                             .chars()
                             .take(prefix.length())
-                            .map(|c| c.len_utf8())
+                            .map(char::len_utf8)
                             .sum();
 
                         f.encode(&value[..pos], &matcher)?;
@@ -429,8 +430,8 @@ pub enum Allow {
 impl Allow {
     pub fn matcher(&self) -> Box<dyn Satisfy> {
         match self {
-            Self::U => return Box::new(satisfy::unreserved()),
-            Self::UR => return Box::new(satisfy::unreserved_or_reserved()),
+            Self::U => Box::new(satisfy::unreserved()),
+            Self::UR => Box::new(satisfy::unreserved_or_reserved()),
         }
     }
 }

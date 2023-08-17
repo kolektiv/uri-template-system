@@ -30,6 +30,6 @@ where
         input
             .bytes()
             .position(|b| !b.is_ascii() || !(self.predicate)(b))
-            .unwrap_or_else(|| input.len())
+            .unwrap_or(input.len())
     }
 }
