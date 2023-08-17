@@ -1,8 +1,12 @@
-// Values
-
 use std::collections::HashMap;
 
 use fnv::FnvBuildHasher;
+
+// =============================================================================
+// Value
+// =============================================================================
+
+// Types
 
 #[derive(Clone, Debug)]
 pub struct Values {
@@ -22,8 +26,6 @@ impl FromIterator<(String, Value)> for Values {
         }
     }
 }
-
-// Value
 
 #[derive(Clone, Debug)]
 pub enum Value {

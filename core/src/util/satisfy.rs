@@ -1,6 +1,6 @@
 pub mod ascii;
-pub mod composite;
 pub mod percent_encoded;
+pub mod tuple;
 pub mod unicode;
 
 use crate::util::satisfy::{
@@ -26,7 +26,7 @@ impl Satisfy for Box<dyn Satisfy> {
 
 // -----------------------------------------------------------------------------
 
-// Presets
+// Standards
 
 pub fn unreserved() -> impl Satisfy {
     Ascii::new(|b| is_unreserved_ascii(b))
@@ -38,8 +38,6 @@ pub fn unreserved_or_reserved() -> impl Satisfy {
         PercentEncoded,
     )
 }
-
-// Predicates
 
 #[rustfmt::skip]
 #[allow(clippy::match_like_matches_macro)]

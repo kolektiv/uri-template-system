@@ -13,15 +13,15 @@ use crate::{
     },
 };
 
-// Variable - List
+// =============================================================================
+// Variable
+// =============================================================================
+
+// Types
 
 pub type VariableList<'t> = Vec<VariableSpecification<'t>>;
 
-// Variable - Specification
-
 pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier<'t>>);
-
-// Variable - Name
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct VariableName<'t> {
@@ -37,6 +37,12 @@ impl<'t> VariableName<'t> {
         self.raw
     }
 }
+
+// -----------------------------------------------------------------------------
+
+// Parse
+
+// Parse - Variable List
 
 impl<'t> TryParse<'t> for VariableList<'t> {
     fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
@@ -81,7 +87,7 @@ enum VariableListNext {
     VarSpec,
 }
 
-// Variable - Specification
+// Parse - Variable Specification
 
 impl<'t> TryParse<'t> for VariableSpecification<'t> {
     fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
@@ -93,13 +99,7 @@ impl<'t> TryParse<'t> for VariableSpecification<'t> {
     }
 }
 
-// Variable - Name
-
-impl<'t> VariableName<'t> {
-    pub const fn parse() -> impl Satisfy {
-        (Ascii::new(is_variable_character_ascii), PercentEncoded)
-    }
-}
+// Parse - Variable Name
 
 impl<'t> TryParse<'t> for VariableName<'t> {
     // TODO: Experiment with ordering for perf?
@@ -117,7 +117,7 @@ impl<'t> TryParse<'t> for VariableName<'t> {
                 VariableNameNext::Dot => {
                     return Ok((state.position, VariableName::new(&raw[..state.position])));
                 }
-                VariableNameNext::VariableCharacters => match Self::parse().satisfy(rest) {
+                VariableNameNext::VariableCharacters => match satisfier().satisfy(rest) {
                     0 => return Err(Error::msg("varname: expected valid char(s)")),
                     n => {
                         state.position += n;
@@ -127,6 +127,10 @@ impl<'t> TryParse<'t> for VariableName<'t> {
             }
         }
     }
+}
+
+const fn satisfier() -> impl Satisfy {
+    (Ascii::new(is_variable_character_ascii), PercentEncoded)
 }
 
 #[derive(Default)]

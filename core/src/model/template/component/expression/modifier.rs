@@ -1,5 +1,3 @@
-// Modifier
-
 use anyhow::{
     Error,
     Result,
@@ -7,13 +5,17 @@ use anyhow::{
 
 use crate::process::parse::TryParse;
 
+// =============================================================================
+// Modifier
+// =============================================================================
+
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Modifier<'t> {
     Explode(Explode<'t>),
     Prefix(Prefix<'t>),
 }
-
-// Modifier - Explode
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Explode<'t> {
@@ -25,8 +27,6 @@ impl<'t> Explode<'t> {
         Self { raw }
     }
 }
-
-// Modifier - Prefix
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Prefix<'t> {
@@ -43,6 +43,10 @@ impl<'t> Prefix<'t> {
         self.length
     }
 }
+
+// -----------------------------------------------------------------------------
+
+// Parse
 
 impl<'t> TryParse<'t> for Option<Modifier<'t>> {
     fn try_parse(raw: &'t str) -> Result<(usize, Self)> {

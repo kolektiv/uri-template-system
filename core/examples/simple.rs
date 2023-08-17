@@ -14,7 +14,7 @@ fn main() {
         ),
     ]);
 
-    let result = template.expand(&values);
+    let expansion = template.expand(&values);
 
-    println!("{result}");
+    println!("{expansion}");
 }

@@ -26,6 +26,12 @@ use crate::{
     },
 };
 
+// =============================================================================
+// Literal
+// =============================================================================
+
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Literal<'t> {
     raw: &'t str,
@@ -37,29 +43,25 @@ impl<'t> Literal<'t> {
     }
 }
 
-impl<'t> Expand for Literal<'t> {
-    fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
-        f.encode(self.raw, &satisfy::unreserved_or_reserved())
-    }
-}
+// -----------------------------------------------------------------------------
 
-impl<'t> Literal<'t> {
-    const fn parse() -> impl Satisfy {
-        (
-            Ascii::new(is_literal_ascii),
-            PercentEncoded,
-            Unicode::new(is_literal_unicode),
-        )
-    }
-}
+// Parse
 
 impl<'t> TryParse<'t> for Literal<'t> {
     fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
-        match Self::parse().satisfy(raw) {
+        match satisfier().satisfy(raw) {
             0 => Err(Error::msg("lit: expected valid char(s)")),
             n => Ok((n, Literal::new(&raw[..n]))),
         }
     }
+}
+
+const fn satisfier() -> impl Satisfy {
+    (
+        Ascii::new(is_literal_ascii),
+        PercentEncoded,
+        Unicode::new(is_literal_unicode),
+    )
 }
 
 #[rustfmt::skip]
@@ -106,5 +108,15 @@ const fn is_literal_unicode(c: char) -> bool {
         | '\u{0f0000}'..='\u{0ffffd}'
         | '\u{100000}'..='\u{10fffd}' => true,
         _ => false,
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Expand
+
+impl<'t> Expand for Literal<'t> {
+    fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
+        f.encode(self.raw, &satisfy::unreserved_or_reserved())
     }
 }

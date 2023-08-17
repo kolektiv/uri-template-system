@@ -20,7 +20,11 @@ use crate::{
     Values,
 };
 
+// =============================================================================
 // Component
+// =============================================================================
+
+// Types
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Component<'t> {
@@ -28,14 +32,9 @@ pub enum Component<'t> {
     Expression(Expression<'t>),
 }
 
-impl<'t> Expand for Component<'t> {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Expression(expression) => expression.expand(values, f),
-            Self::Literal(literal) => literal.expand(values, f),
-        }
-    }
-}
+// -----------------------------------------------------------------------------
+
+// Parse
 
 impl<'t> TryParse<'t> for Vec<Component<'t>> {
     fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
@@ -50,15 +49,17 @@ impl<'t> TryParse<'t> for Vec<Component<'t>> {
             }
 
             let parsed = if rest.starts_with('{') {
-                Expression::try_parse(rest).map(|(pos, expr)| (pos, Component::Expression(expr)))
+                Expression::try_parse(rest)
+                    .map(|(position, expression)| (position, Component::Expression(expression)))
             } else {
-                Literal::try_parse(rest).map(|(pos, lit)| (pos, Component::Literal(lit)))
+                Literal::try_parse(rest)
+                    .map(|(position, literal)| (position, Component::Literal(literal)))
             };
 
             match parsed {
-                Ok((pos, comp)) => {
-                    parsed_components.push(comp);
-                    state.position += pos;
+                Ok((position, component)) => {
+                    parsed_components.push(component);
+                    state.position += position;
                 }
                 Err(err) => return Err(err),
             }
@@ -71,4 +72,17 @@ impl<'t> TryParse<'t> for Vec<Component<'t>> {
 #[derive(Default)]
 struct ComponentState {
     position: usize,
+}
+
+// -----------------------------------------------------------------------------
+
+// Expand
+
+impl<'t> Expand for Component<'t> {
+    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Expression(expression) => expression.expand(values, f),
+            Self::Literal(literal) => literal.expand(values, f),
+        }
+    }
 }

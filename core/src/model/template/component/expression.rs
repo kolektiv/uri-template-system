@@ -41,6 +41,12 @@ use crate::{
     },
 };
 
+// =============================================================================
+// Expression
+// =============================================================================
+
+// Types
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Expression<'t> {
     operator: Option<Operator<'t>>,
@@ -62,29 +68,80 @@ impl<'t> Expression<'t> {
     }
 }
 
-#[derive(Debug)]
-pub struct Behaviour {
-    pub first: Option<char>,
-    pub sep: char,
-    pub named: bool,
-    pub ifemp: Option<char>,
-    pub allow: Allow,
-}
+// -----------------------------------------------------------------------------
 
-#[derive(Debug)]
-pub enum Allow {
-    U,
-    UR,
-}
+// Parse
 
-impl Allow {
-    pub fn matcher(&self) -> Box<dyn Satisfy> {
-        match self {
-            Self::U => return Box::new(satisfy::unreserved()),
-            Self::UR => return Box::new(satisfy::unreserved_or_reserved()),
+impl<'t> TryParse<'t> for Expression<'t> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+        let mut parsed_operator = None;
+        let mut parsed_variable_list = Vec::new();
+        let mut state = ExpressionState::default();
+
+        loop {
+            let rest = &raw[state.position..];
+
+            match &state.next {
+                ExpressionNext::OpeningBrace if rest.starts_with('{') => {
+                    state.next = ExpressionNext::Operator;
+                    state.position += 1;
+                }
+                ExpressionNext::OpeningBrace => {
+                    return Err(Error::msg("expr: expected opening brace"))
+                }
+                ExpressionNext::Operator => match Option::<Operator>::parse(rest) {
+                    (position, operator) => {
+                        parsed_operator = operator;
+                        state.next = ExpressionNext::VariableList;
+                        state.position += position;
+                    }
+                },
+                ExpressionNext::VariableList => match VariableList::try_parse(rest) {
+                    Ok((position, variable_list)) => {
+                        parsed_variable_list.extend(variable_list);
+                        state.next = ExpressionNext::ClosingBrace;
+                        state.position += position;
+                    }
+                    Err(err) => return Err(err),
+                },
+                ExpressionNext::ClosingBrace if rest.starts_with('}') => {
+                    state.position += 1;
+
+                    return Ok((
+                        state.position,
+                        Self::new(
+                            &raw[..state.position],
+                            parsed_operator,
+                            parsed_variable_list,
+                        ),
+                    ));
+                }
+                ExpressionNext::ClosingBrace => {
+                    return Err(Error::msg("exp: expected closing brace"))
+                }
+            }
         }
     }
 }
+
+#[derive(Default)]
+struct ExpressionState {
+    next: ExpressionNext,
+    position: usize,
+}
+
+#[derive(Default)]
+enum ExpressionNext {
+    #[default]
+    OpeningBrace,
+    Operator,
+    VariableList,
+    ClosingBrace,
+}
+
+// -----------------------------------------------------------------------------
+
+// Expand
 
 impl<'t> Expand for Expression<'t> {
     fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
@@ -354,69 +411,26 @@ impl<'t> Expand for Expression<'t> {
     }
 }
 
-impl<'t> TryParse<'t> for Expression<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
-        let mut parsed_operator = None;
-        let mut parsed_variable_list = Vec::new();
-        let mut state = ExpressionState::default();
+#[derive(Debug)]
+pub struct Behaviour {
+    pub first: Option<char>,
+    pub sep: char,
+    pub named: bool,
+    pub ifemp: Option<char>,
+    pub allow: Allow,
+}
 
-        loop {
-            let rest = &raw[state.position..];
+#[derive(Debug)]
+pub enum Allow {
+    U,
+    UR,
+}
 
-            match &state.next {
-                ExpressionNext::OpeningBrace if rest.starts_with('{') => {
-                    state.next = ExpressionNext::Operator;
-                    state.position += 1;
-                }
-                ExpressionNext::OpeningBrace => {
-                    return Err(Error::msg("expr: expected opening brace"))
-                }
-                ExpressionNext::Operator => match Option::<Operator>::parse(rest) {
-                    (position, operator) => {
-                        parsed_operator = operator;
-                        state.next = ExpressionNext::VariableList;
-                        state.position += position;
-                    }
-                },
-                ExpressionNext::VariableList => match VariableList::try_parse(rest) {
-                    Ok((position, variable_list)) => {
-                        parsed_variable_list.extend(variable_list);
-                        state.next = ExpressionNext::ClosingBrace;
-                        state.position += position;
-                    }
-                    Err(err) => return Err(err),
-                },
-                ExpressionNext::ClosingBrace if rest.starts_with('}') => {
-                    state.position += 1;
-
-                    return Ok((
-                        state.position,
-                        Self::new(
-                            &raw[..state.position],
-                            parsed_operator,
-                            parsed_variable_list,
-                        ),
-                    ));
-                }
-                ExpressionNext::ClosingBrace => {
-                    return Err(Error::msg("exp: expected closing brace"))
-                }
-            }
+impl Allow {
+    pub fn matcher(&self) -> Box<dyn Satisfy> {
+        match self {
+            Self::U => return Box::new(satisfy::unreserved()),
+            Self::UR => return Box::new(satisfy::unreserved_or_reserved()),
         }
     }
-}
-
-#[derive(Default)]
-struct ExpressionState {
-    next: ExpressionNext,
-    position: usize,
-}
-
-#[derive(Default)]
-enum ExpressionNext {
-    #[default]
-    OpeningBrace,
-    Operator,
-    VariableList,
-    ClosingBrace,
 }
