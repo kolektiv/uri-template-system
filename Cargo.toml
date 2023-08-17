@@ -1,16 +1,6 @@
 [workspace]
 members = ["core", "fixtures", "meta"]
 
-[workspace.dependencies]
-anyhow = "1"
-criterion = "0.5"
-fnv = "1"
-indexmap = { version = "2", features = ["serde"] }
-paste = "1"
-serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1", features = ["preserve_order"] }
-thiserror = "1"
-
 [workspace.package]
 authors = ["Andrew Cherry (kolektiv)"]
 categories = [

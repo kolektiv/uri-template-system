@@ -92,6 +92,7 @@ fn data() -> &'static (Vec<Group>, Vec<Group>, Vec<Group>) {
     })
 }
 
+#[rustfmt::skip]
 fn load(fixtures_json: &str) -> Vec<Group> {
     serde_json::from_str::<IndexMap<String, JSONCases>>(fixtures_json)
         .expect("deserialization error")
@@ -102,10 +103,7 @@ fn load(fixtures_json: &str) -> Vec<Group> {
                 .variables
                 .into_iter()
                 .filter_map(|(name, variable)| match variable {
-                    JSONVariable::AssociativeArray(value) => Some((
-                        name,
-                        Variable::AssociativeArray(value.into_iter().collect()),
-                    )),
+                    JSONVariable::AssociativeArray(value) => Some((name, Variable::AssociativeArray(value.into_iter().collect()))),
                     JSONVariable::Item(value) => Some((name, Variable::Item(value))),
                     JSONVariable::List(value) => Some((name, Variable::List(value))),
                     JSONVariable::Number(value) => Some((name, Variable::Item(value.to_string()))),
