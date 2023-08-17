@@ -13,8 +13,7 @@ version.workspace = true
 anyhow = { workspace = true }
 fnv = { workspace = true }
 indexmap = { workspace = true }
-nom = { workspace = true }
-nom-supreme = { workspace = true }
+paste = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

@@ -101,8 +101,7 @@ fn setup(group: &Group) -> (Vec<String>, Vec<String>) {
 
 mod uri_template_system {
     use uri_template_system_core::{
-        IndexMap,
-        URITemplate,
+        Template,
         Value,
         Values,
     };
@@ -110,14 +109,17 @@ mod uri_template_system {
 
     pub fn prepare(variables: Vec<(String, Variable)>) -> Values {
         Values::from_iter(variables.into_iter().map(|(n, v)| match v {
-            Variable::AssociativeArray(v) => (n, Value::AssociativeArray(IndexMap::from_iter(v))),
+            Variable::AssociativeArray(v) => (n, Value::AssociativeArray(v)),
             Variable::Item(v) => (n, Value::Item(v)),
             Variable::List(v) => (n, Value::List(v)),
         }))
     }
 
     pub fn test(template: &str, values: &Values) -> String {
-        URITemplate::parse(template).unwrap().expand(values)
+        Template::parse(template)
+            .unwrap()
+            .expand(values)
+            .to_string()
     }
 }
 

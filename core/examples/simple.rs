@@ -1,11 +1,11 @@
 use uri_template_system_core::{
-    URITemplate,
+    Template,
     Value,
     Values,
 };
 
 fn main() {
-    let template = URITemplate::parse("/literal/{simple}{/expanded*}").unwrap();
+    let template = Template::parse("/literal/{simple}{/expanded*}").unwrap();
     let values = Values::from_iter([
         ("simple".into(), Value::Item("hello".into())),
         (

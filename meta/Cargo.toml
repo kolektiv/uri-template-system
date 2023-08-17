@@ -1,0 +1,13 @@
+[package]
+name = "uri-template-system"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
+
+[dependencies]
+uri-template-system-core = { path = "../core" }
