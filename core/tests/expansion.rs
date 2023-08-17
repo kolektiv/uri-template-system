@@ -71,7 +71,7 @@ fn test(name: &str, groups: Vec<Group>) {
 
 mod uri_template_system {
     use uri_template_system_core::{
-        URITemplate,
+        Template,
         Value,
         Values,
     };
@@ -86,7 +86,7 @@ mod uri_template_system {
     }
 
     pub fn test(template: &str, values: &Values) -> String {
-        URITemplate::parse(template)
+        Template::parse(template)
             .unwrap()
             .expand(values)
             .to_string()

@@ -1,9 +1,9 @@
 use std::fmt::{
     self,
-    Formatter,
+    Write,
 };
 
-use crate::satisfy::Satisfier;
+use crate::action::satisfy::Satisfy;
 
 // =============================================================================
 // Encode
@@ -11,16 +11,15 @@ use crate::satisfy::Satisfier;
 
 // Traits
 
-pub trait EncodeExt {
-    fn write_str_encoded(&mut self, raw: &str, matcher: &impl Satisfier) -> fmt::Result;
+pub trait Encode {
+    fn encode(&mut self, raw: &str, matcher: &impl Satisfy) -> fmt::Result;
 }
 
-// =============================================================================
-// Implementation
-// =============================================================================
-
-impl EncodeExt for Formatter<'_> {
-    fn write_str_encoded(&mut self, raw: &str, satisifer: &impl Satisfier) -> fmt::Result {
+impl<T> Encode for T
+where
+    T: Write,
+{
+    fn encode(&mut self, raw: &str, satisifer: &impl Satisfy) -> fmt::Result {
         let mut position = 0;
 
         loop {
@@ -30,7 +29,7 @@ impl EncodeExt for Formatter<'_> {
                 break;
             }
 
-            match satisifer.satisfies(rest) {
+            match satisifer.satisfy(rest) {
                 0 => {
                     if let Some(c) = rest.chars().next() {
                         for b in c.encode_utf8(&mut [0; 4]).bytes() {

@@ -1,93 +1,71 @@
+mod modifier;
+mod operator;
+mod variable;
+
 use std::fmt::{
-    Display,
+    self,
     Formatter,
-    Result,
     Write,
 };
 
-use crate::{
-    encode::{
-        self,
-        EncodeExt,
-    },
-    satisfy::{
-        Ascii,
-        PercentEncoded,
-        Satisfier,
-    },
-    Component,
-    Expression,
-    Literal,
-    Modifier,
-    OpLevel2,
-    OpLevel3,
-    Operator,
-    Template,
-    Value,
-    Values,
+use anyhow::{
+    Error,
+    Result,
 };
 
-// =============================================================================
-// Expansion
-// =============================================================================
+use crate::{
+    action::{
+        encode::{
+            self,
+            Encode,
+        },
+        expand::Expand,
+        parse::{
+            Parse,
+            TryParse,
+        },
+        satisfy::{
+            Ascii,
+            PercentEncoded,
+            Satisfy,
+        },
+    },
+    model::{
+        template::component::{
+            expression::{
+                modifier::Modifier,
+                operator::Operator,
+                variable::VariableList,
+            },
+            literal::Literal,
+        },
+        value::{
+            Value,
+            Values,
+        },
+    },
+};
 
-// Traits
-
-pub trait Expand {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> Result;
+#[derive(Debug, Eq, PartialEq)]
+pub struct Expression<'t> {
+    operator: Option<Operator<'t>>,
+    raw: &'t str,
+    variable_list: VariableList<'t>,
 }
 
-// -----------------------------------------------------------------------------
-
-// Types
-
-pub struct Expansion<'e, 't> {
-    template: &'e Template<'t>,
-    values: &'e Values,
-}
-
-impl<'e, 't> Expansion<'e, 't> {
-    pub fn new(template: &'e Template<'t>, values: &'e Values) -> Self {
-        Self { template, values }
-    }
-}
-
-impl<'e, 't> Display for Expansion<'e, 't> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.template.expand(self.values, f)
-    }
-}
-
-// =============================================================================
-// Implementations
-// =============================================================================
-
-// Template
-
-impl<'t> Expand for Template<'t> {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> Result {
-        self.components
-            .iter()
-            .try_for_each(|component| component.expand(values, f))
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-// Component
-
-impl<'t> Expand for Component<'t> {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Expression(expression) => expression.expand(values, f),
-            Self::Literal(literal) => literal.expand(values, f),
+impl<'t> Expression<'t> {
+    const fn new(
+        raw: &'t str,
+        operator: Option<Operator<'t>>,
+        variable_list: VariableList<'t>,
+    ) -> Self {
+        Self {
+            operator,
+            raw,
+            variable_list,
         }
     }
 }
-
-// -----------------------------------------------------------------------------
-
-// Expression
 
 #[derive(Debug)]
 pub struct Behaviour {
@@ -105,7 +83,7 @@ pub enum Allow {
 }
 
 impl Allow {
-    pub fn matcher(&self) -> Box<dyn Satisfier> {
+    pub fn matcher(&self) -> Box<dyn Satisfy> {
         match self {
             Self::U => return Box::new(Ascii::new(|b| encode::is_unreserved_ascii(b))),
             Self::UR => {
@@ -119,12 +97,12 @@ impl Allow {
 }
 
 impl<'t> Expand for Expression<'t> {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> Result {
+    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
         let behaviour = self
             .operator
             .as_ref()
             .map(|operator| operator.behaviour())
-            .unwrap_or(&DEFAULT_BEHAVIOUR);
+            .unwrap_or(&operator::DEFAULT_BEHAVIOUR);
 
         let matcher = behaviour.allow.matcher();
         let mut first = true;
@@ -161,7 +139,7 @@ impl<'t> Expand for Expression<'t> {
                     // * if named is true, append the varname to the result string using the same
                     //   encoding process as for literals, and
 
-                    f.write_str_encoded(var_name.name(), &Literal::expansion())?;
+                    f.encode(var_name.name(), &Literal::expansion())?;
 
                     if value.is_empty() {
                         // + if the value is empty, append the ifemp string to the result string and
@@ -192,13 +170,13 @@ impl<'t> Expand for Expression<'t> {
                             .map(|c| c.len_utf8())
                             .sum();
 
-                        f.write_str_encoded(&value[..pos], &matcher)?;
+                        f.encode(&value[..pos], &matcher)?;
                     }
                     _ => {
                         // * otherwise, append the value to the result string after pct-encoding any
                         //   characters that are not in the allow set.
 
-                        f.write_str_encoded(value, &matcher)?;
+                        f.encode(value, &matcher)?;
                     }
                 };
             } else if let Some(Modifier::Explode(_)) = modifier {
@@ -224,7 +202,7 @@ impl<'t> Expand for Expression<'t> {
                             // + if this is a pair, append the name to the result string using the
                             //   same encoding process as for literals;
 
-                            f.write_str_encoded(name, &Literal::expansion())?;
+                            f.encode(name, &Literal::expansion())?;
 
                             // + if the member/value is empty, append the ifemp string to the result
                             //   string; otherwise, append "=" and the member/value to the result
@@ -237,7 +215,7 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             } else {
                                 f.write_char('=')?;
-                                f.write_str_encoded(value, &matcher)?;
+                                f.encode(value, &matcher)?;
                             }
                         }
                     } else if let Value::List(value) = value {
@@ -256,7 +234,7 @@ impl<'t> Expand for Expression<'t> {
                             // + if this is a list, append the varname to the result string using
                             //   the same encoding process as for literals;
 
-                            f.write_str_encoded(var_name.name(), &Literal::expansion())?;
+                            f.encode(var_name.name(), &Literal::expansion())?;
 
                             // + if the member/value is empty, append the ifemp string to the result
                             //   string; otherwise, append "=" and the member/value to the result
@@ -269,7 +247,7 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             } else {
                                 f.write_char('=')?;
-                                f.write_str_encoded(value, &matcher)?;
+                                f.encode(value, &matcher)?;
                             }
                         }
                     }
@@ -293,9 +271,9 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             }
 
-                            f.write_str_encoded(name, &matcher)?;
+                            f.encode(name, &matcher)?;
                             f.write_char('=')?;
-                            f.write_str_encoded(value, &matcher)?;
+                            f.encode(value, &matcher)?;
                         }
                     } else if let Value::List(value) = value {
                         // + if this is a list, append each defined list member to the result
@@ -314,7 +292,7 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             }
 
-                            f.write_str_encoded(value, &matcher)?;
+                            f.encode(value, &matcher)?;
                         }
                     }
                 }
@@ -325,7 +303,7 @@ impl<'t> Expand for Expression<'t> {
                     // * if named is true, append the varname to the result string using the same
                     //   encoding process as for literals, and
 
-                    f.write_str_encoded(var_name.name(), &Literal::expansion())?;
+                    f.encode(var_name.name(), &Literal::expansion())?;
 
                     // + if the value is empty, append the ifemp string to the result string and
                     //   skip to the next varspec;
@@ -354,9 +332,9 @@ impl<'t> Expand for Expression<'t> {
                                 f.write_char(',')?;
                             }
 
-                            f.write_str_encoded(name, &matcher)?;
+                            f.encode(name, &matcher)?;
                             f.write_char(',')?;
-                            f.write_str_encoded(value, &matcher)?;
+                            f.encode(value, &matcher)?;
                         }
                     }
                 } else if let Value::List(value) = value {
@@ -375,7 +353,7 @@ impl<'t> Expand for Expression<'t> {
                                 f.write_char(',')?;
                             }
 
-                            f.write_str_encoded(value, &matcher)?;
+                            f.encode(value, &matcher)?;
                         }
                     }
                 }
@@ -386,73 +364,69 @@ impl<'t> Expand for Expression<'t> {
     }
 }
 
-// -----------------------------------------------------------------------------
+impl<'t> TryParse<'t> for Expression<'t> {
+    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+        let mut parsed_operator = None;
+        let mut parsed_variable_list = Vec::new();
+        let mut state = ExpressionState::default();
 
-// Operator
+        loop {
+            let rest = &raw[state.position..];
 
-impl<'t> Operator<'t> {
-    pub fn behaviour(&self) -> &Behaviour {
-        match self {
-            Self::Level2(op_level_2) => match op_level_2 {
-                OpLevel2::Fragment(_) => &FRAGMENT_BEHAVIOUR,
-                OpLevel2::Reserved(_) => &RESERVED_BEHAVIOUR,
-            },
-            Self::Level3(op_level_3) => match op_level_3 {
-                OpLevel3::Label(_) => &LABEL_BEHAVIOUR,
-                OpLevel3::Path(_) => &PATH_BEHAVIOUR,
-                OpLevel3::PathParameter(_) => &PATH_PARAMETER_BEHAVIOUR,
-                OpLevel3::Query(_) => &QUERY_BEHAVIOUR,
-                OpLevel3::QueryContinuation(_) => &QUERY_CONTINUATION_BEHAVIOUR,
-            },
+            match &state.next {
+                ExpressionNext::OpeningBrace if rest.starts_with('{') => {
+                    state.next = ExpressionNext::Operator;
+                    state.position += 1;
+                }
+                ExpressionNext::OpeningBrace => {
+                    return Err(Error::msg("expr: expected opening brace"))
+                }
+                ExpressionNext::Operator => match Option::<Operator>::parse(rest) {
+                    (position, operator) => {
+                        parsed_operator = operator;
+                        state.next = ExpressionNext::VariableList;
+                        state.position += position;
+                    }
+                },
+                ExpressionNext::VariableList => match VariableList::try_parse(rest) {
+                    Ok((position, variable_list)) => {
+                        parsed_variable_list.extend(variable_list);
+                        state.next = ExpressionNext::ClosingBrace;
+                        state.position += position;
+                    }
+                    Err(err) => return Err(err),
+                },
+                ExpressionNext::ClosingBrace if rest.starts_with('}') => {
+                    state.position += 1;
+
+                    return Ok((
+                        state.position,
+                        Self::new(
+                            &raw[..state.position],
+                            parsed_operator,
+                            parsed_variable_list,
+                        ),
+                    ));
+                }
+                ExpressionNext::ClosingBrace => {
+                    return Err(Error::msg("exp: expected closing brace"))
+                }
+            }
         }
     }
 }
 
-macro_rules! behaviour {
-    ($name:ident, $first:stmt, $sep:literal, $named:literal, $ifemp:stmt, $allow:ty) => {
-        paste::paste! {
-            static [< $name:snake:upper _BEHAVIOUR >]: Behaviour = Behaviour {
-                first: $first,
-                sep: $sep,
-                named: $named,
-                ifemp: $ifemp,
-                allow: $allow
-            };
-        }
-    };
-}
-// Operator - None
-
-behaviour!(Default, None, ',', false, None, Allow::U);
-
-// Operator - Level 2
-
-behaviour!(Fragment, Some('#'), ',', false, None, Allow::UR);
-behaviour!(Reserved, None, ',', false, None, Allow::UR);
-
-// Operator - Level 3
-
-behaviour!(Label, Some('.'), '.', false, None, Allow::U);
-behaviour!(Path, Some('/'), '/', false, None, Allow::U);
-behaviour!(PathParameter, Some(';'), ';', true, None, Allow::U);
-behaviour!(Query, Some('?'), '&', true, Some('='), Allow::U);
-behaviour!(QueryContinuation, Some('&'), '&', true, Some('='), Allow::U);
-
-// -----------------------------------------------------------------------------
-
-// Literal
-
-impl<'t> Literal<'t> {
-    pub const fn expansion() -> impl Satisfier {
-        (
-            Ascii::new(|b| encode::is_unreserved_ascii(b) || encode::is_reserved_ascii(b)),
-            PercentEncoded,
-        )
-    }
+#[derive(Default)]
+struct ExpressionState {
+    next: ExpressionNext,
+    position: usize,
 }
 
-impl<'t> Expand for Literal<'t> {
-    fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> Result {
-        f.write_str_encoded(self.raw, &Self::expansion())
-    }
+#[derive(Default)]
+enum ExpressionNext {
+    #[default]
+    OpeningBrace,
+    Operator,
+    VariableList,
+    ClosingBrace,
 }
