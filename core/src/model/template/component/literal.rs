@@ -3,16 +3,14 @@ use std::fmt::{
     Formatter,
 };
 
-use anyhow::{
-    Error,
-    Result,
-};
-
 use crate::{
     model::value::Values,
     process::{
         expand::Expand,
-        parse::TryParse,
+        parse::{
+            ParseError,
+            TryParse,
+        },
     },
     util::{
         encode::Encode,
@@ -34,12 +32,12 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Literal<'t> {
-    raw: &'t str,
+    value: &'t str,
 }
 
 impl<'t> Literal<'t> {
-    pub const fn new(raw: &'t str) -> Self {
-        Self { raw }
+    pub const fn new(value: &'t str) -> Self {
+        Self { value }
     }
 }
 
@@ -48,9 +46,13 @@ impl<'t> Literal<'t> {
 // Parse
 
 impl<'t> TryParse<'t> for Literal<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         match satisfier().satisfy(raw) {
-            0 => Err(Error::msg("lit: expected valid char(s)")),
+            0 => Err(ParseError::UnexpectedInput {
+                position: global,
+                message: "unexpected input parsing literal component".into(),
+                expected: "valid literal characters (see: https://datatracker.ietf.org/doc/html/rfc6570#section-2.1)".into(),
+            }),
             n => Ok((n, Literal::new(&raw[..n]))),
         }
     }
@@ -117,6 +119,6 @@ const fn is_literal_unicode(c: char) -> bool {
 
 impl<'t> Expand for Literal<'t> {
     fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
-        f.encode(self.raw, &satisfy::unreserved_or_reserved())
+        f.encode(self.value, &satisfy::unreserved_or_reserved())
     }
 }

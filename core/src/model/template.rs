@@ -5,8 +5,6 @@ use std::fmt::{
     Formatter,
 };
 
-use anyhow::Result;
-
 use crate::{
     model::{
         template::component::Component,
@@ -17,7 +15,11 @@ use crate::{
             Expand,
             Expansion,
         },
-        parse::TryParse,
+        parse::{
+            ParseError,
+            // ParseRef,
+            TryParse,
+        },
     },
 };
 
@@ -29,8 +31,7 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Template<'t> {
-    pub components: Vec<Component<'t>>,
-    pub raw: &'t str,
+    components: Vec<Component<'t>>,
 }
 
 impl<'t> Template<'t> {
@@ -39,12 +40,12 @@ impl<'t> Template<'t> {
         Expansion::new(self, values)
     }
 
-    pub fn parse(raw: &'t str) -> Result<Self> {
-        Self::try_parse(raw).map(|(_, template)| template)
+    pub fn parse(raw: &'t str) -> Result<Self, ParseError> {
+        Self::try_parse(raw, 0).map(|(_, template)| template)
     }
 
-    const fn new(raw: &'t str, components: Vec<Component<'t>>) -> Self {
-        Self { components, raw }
+    const fn new(components: Vec<Component<'t>>) -> Self {
+        Self { components }
     }
 }
 
@@ -53,9 +54,9 @@ impl<'t> Template<'t> {
 // Parse
 
 impl<'t> TryParse<'t> for Template<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
-        Vec::<Component<'t>>::try_parse(raw)
-            .map(|(_, components)| (raw.len(), Self::new(raw, components)))
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
+        Vec::<Component<'t>>::try_parse(raw, global)
+            .map(|(position, components)| (position, Self::new(components)))
     }
 }
 

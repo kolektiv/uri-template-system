@@ -6,6 +6,9 @@ use uri_template_system_core::{
 
 fn main() {
     let template = Template::parse("/literal/{simple}{/expanded*}").unwrap();
+
+    dbg!(&template);
+
     let values = Values::from_iter([
         ("simple".into(), Value::Item("hello".into())),
         (

@@ -8,11 +8,6 @@ use std::fmt::{
     Write,
 };
 
-use anyhow::{
-    Error,
-    Result,
-};
-
 use crate::{
     model::{
         template::component::expression::{
@@ -29,6 +24,7 @@ use crate::{
         expand::Expand,
         parse::{
             Parse,
+            ParseError,
             TryParse,
         },
     },
@@ -49,20 +45,14 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Expression<'t> {
-    operator: Option<Operator<'t>>,
-    raw: &'t str,
+    operator: Option<Operator>,
     variable_list: VariableList<'t>,
 }
 
 impl<'t> Expression<'t> {
-    const fn new(
-        raw: &'t str,
-        operator: Option<Operator<'t>>,
-        variable_list: VariableList<'t>,
-    ) -> Self {
+    const fn new(operator: Option<Operator>, variable_list: VariableList<'t>) -> Self {
         Self {
             operator,
-            raw,
             variable_list,
         }
     }
@@ -73,7 +63,7 @@ impl<'t> Expression<'t> {
 // Parse
 
 impl<'t> TryParse<'t> for Expression<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut parsed_operator = None;
         let mut parsed_variable_list = Vec::new();
         let mut state = ExpressionState::default();
@@ -87,37 +77,44 @@ impl<'t> TryParse<'t> for Expression<'t> {
                     state.position += 1;
                 }
                 ExpressionNext::OpeningBrace => {
-                    return Err(Error::msg("expr: expected opening brace"))
+                    return Err(ParseError::UnexpectedInput {
+                        position: global + state.position,
+                        message: "unexpected input when parsing expression component".into(),
+                        expected: "opening brace ('{')".into(),
+                    });
                 }
                 ExpressionNext::Operator => {
-                    let (position, operator) = Option::<Operator>::parse(rest);
+                    let (position, operator) =
+                        Option::<Operator>::parse(rest, global + state.position);
 
                     parsed_operator = operator;
                     state.next = ExpressionNext::VariableList;
                     state.position += position;
                 }
-                ExpressionNext::VariableList => match VariableList::try_parse(rest) {
-                    Ok((position, variable_list)) => {
-                        parsed_variable_list.extend(variable_list);
-                        state.next = ExpressionNext::ClosingBrace;
-                        state.position += position;
+                ExpressionNext::VariableList => {
+                    match VariableList::try_parse(rest, global + state.position) {
+                        Ok((position, variable_list)) => {
+                            parsed_variable_list.extend(variable_list);
+                            state.next = ExpressionNext::ClosingBrace;
+                            state.position += position;
+                        }
+                        Err(err) => return Err(err),
                     }
-                    Err(err) => return Err(err),
-                },
+                }
                 ExpressionNext::ClosingBrace if rest.starts_with('}') => {
                     state.position += 1;
 
                     return Ok((
                         state.position,
-                        Self::new(
-                            &raw[..state.position],
-                            parsed_operator,
-                            parsed_variable_list,
-                        ),
+                        Self::new(parsed_operator, parsed_variable_list),
                     ));
                 }
                 ExpressionNext::ClosingBrace => {
-                    return Err(Error::msg("exp: expected closing brace"))
+                    return Err(ParseError::UnexpectedInput {
+                        position: global + state.position,
+                        message: "unexpected input when parsing expression component".into(),
+                        expected: "closing brace ('}')".into(),
+                    });
                 }
             }
         }
@@ -145,6 +142,7 @@ enum ExpressionNext {
 
 impl<'t> Expand for Expression<'t> {
     #[allow(clippy::cognitive_complexity)] // TODO: Reduce?
+    #[allow(clippy::equatable_if_let)]
     #[allow(clippy::too_many_lines)]
     fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
         let behaviour = self
@@ -204,7 +202,7 @@ impl<'t> Expand for Expression<'t> {
                 }
 
                 match modifier {
-                    Some(Modifier::Prefix(prefix)) => {
+                    Some(Modifier::Prefix(length)) => {
                         // * if a prefix modifier is present and the prefix length is less than the
                         //   value string length in number of Unicode characters, append that number
                         //   of characters from the beginning of the value string to the result
@@ -212,11 +210,7 @@ impl<'t> Expand for Expression<'t> {
                         //   set, while taking care not to split multi-octet or pct-encoded triplet
                         //   characters that represent a single Unicode code point;
 
-                        let pos: usize = value
-                            .chars()
-                            .take(prefix.length())
-                            .map(char::len_utf8)
-                            .sum();
+                        let pos: usize = value.chars().take(*length).map(char::len_utf8).sum();
 
                         f.encode(&value[..pos], &matcher)?;
                     }
@@ -227,7 +221,7 @@ impl<'t> Expand for Expression<'t> {
                         f.encode(value, &matcher)?;
                     }
                 };
-            } else if let Some(Modifier::Explode(_)) = modifier {
+            } else if let Some(Modifier::Explode) = modifier {
                 // else if an explode modifier is given, then
 
                 if behaviour.named {

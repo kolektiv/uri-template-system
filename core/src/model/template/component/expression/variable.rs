@@ -1,11 +1,9 @@
-use anyhow::{
-    Error,
-    Result,
-};
-
 use crate::{
     model::template::component::expression::modifier::Modifier,
-    process::parse::TryParse,
+    process::parse::{
+        ParseError,
+        TryParse,
+    },
     util::satisfy::{
         ascii::Ascii,
         percent_encoded::PercentEncoded,
@@ -23,21 +21,21 @@ use crate::{
 pub type VariableList<'t> = Vec<VariableSpecification<'t>>;
 
 #[allow(clippy::module_name_repetitions)]
-pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier<'t>>);
+pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier>);
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Eq, PartialEq)]
 pub struct VariableName<'t> {
-    raw: &'t str,
+    name: &'t str,
 }
 
 impl<'t> VariableName<'t> {
-    const fn new(raw: &'t str) -> Self {
-        Self { raw }
+    const fn new(name: &'t str) -> Self {
+        Self { name }
     }
 
     pub const fn name(&self) -> &str {
-        self.raw
+        self.name
     }
 }
 
@@ -48,7 +46,7 @@ impl<'t> VariableName<'t> {
 // Parse - Variable List
 
 impl<'t> TryParse<'t> for VariableList<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut parsed_variable_specifications = Self::new();
         let mut state = VariableListState::default();
 
@@ -63,15 +61,17 @@ impl<'t> TryParse<'t> for VariableList<'t> {
                 VariableListNext::Comma => {
                     return Ok((state.position, parsed_variable_specifications))
                 }
-                VariableListNext::VarSpec => match VariableSpecification::try_parse(rest) {
-                    Ok((position, variable_specification)) => {
-                        parsed_variable_specifications.push(variable_specification);
+                VariableListNext::VarSpec => {
+                    match VariableSpecification::try_parse(rest, global + state.position) {
+                        Ok((position, variable_specification)) => {
+                            parsed_variable_specifications.push(variable_specification);
 
-                        state.next = VariableListNext::Comma;
-                        state.position += position;
+                            state.next = VariableListNext::Comma;
+                            state.position += position;
+                        }
+                        Err(err) => return Err(err),
                     }
-                    Err(err) => return Err(err),
-                },
+                }
             }
         }
     }
@@ -93,9 +93,9 @@ enum VariableListNext {
 // Parse - Variable Specification
 
 impl<'t> TryParse<'t> for VariableSpecification<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
-        VariableName::try_parse(raw).and_then(|(position_a, variable_name)| {
-            Option::<Modifier>::try_parse(&raw[position_a..])
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
+        VariableName::try_parse(raw, global).and_then(|(position_a, variable_name)| {
+            Option::<Modifier>::try_parse(&raw[position_a..], global + position_a)
                 .map(|(position_b, modifier)| (position_a + position_b, (variable_name, modifier)))
         })
     }
@@ -104,14 +104,26 @@ impl<'t> TryParse<'t> for VariableSpecification<'t> {
 // Parse - Variable Name
 
 impl<'t> TryParse<'t> for VariableName<'t> {
-    // TODO: Experiment with ordering for perf?
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut state = VariableNameState::default();
 
         loop {
             let rest = &raw[state.position..];
 
             match &state.next {
+                VariableNameNext::VariableCharacters => match satisfier().satisfy(rest) {
+                    0 => {
+                        return Err(ParseError::UnexpectedInput {
+                            position: global + state.position,
+                            message: "unexpected input parsing variable name".into(),
+                            expected: "valid var_name characters (see: https://datatracker.ietf.org/doc/html/rfc6570#section-2.3)".into(),
+                        })
+                    }
+                    n => {
+                        state.position += n;
+                        state.next = VariableNameNext::Dot;
+                    }
+                },
                 VariableNameNext::Dot if rest.starts_with('.') => {
                     state.position += 1;
                     state.next = VariableNameNext::VariableCharacters;
@@ -119,13 +131,6 @@ impl<'t> TryParse<'t> for VariableName<'t> {
                 VariableNameNext::Dot => {
                     return Ok((state.position, VariableName::new(&raw[..state.position])));
                 }
-                VariableNameNext::VariableCharacters => match satisfier().satisfy(rest) {
-                    0 => return Err(Error::msg("varname: expected valid char(s)")),
-                    n => {
-                        state.position += n;
-                        state.next = VariableNameNext::Dot;
-                    }
-                },
             }
         }
     }
