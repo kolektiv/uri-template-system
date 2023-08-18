@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "fixtures", "meta"]
+members = ["core", "meta", "tests"]
 
 [workspace.package]
 authors = ["Andrew Cherry (kolektiv)"]

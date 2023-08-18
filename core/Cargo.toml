@@ -19,11 +19,3 @@ criterion = "0.5"
 iri-string = "0.7"
 uri-template-system-fixtures = { path = "../fixtures" }
 uritemplate-next = "0.2"
-
-[[bench]]
-name = "comparison"
-harness = false
-
-[[bench]]
-name = "optimisation"
-harness = false

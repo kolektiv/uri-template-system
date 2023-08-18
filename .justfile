@@ -17,4 +17,4 @@ criterion_home := criterion_home_root/project_name
 
 bench name *args:
     #!/usr/bin/env bash
-    CRITERION_HOME={{criterion_home/name}} cargo bench -p uri-template-system-core --bench {{name}} -- --verbose {{args}}
+    CRITERION_HOME={{criterion_home/name}} cargo bench -p uri-template-system-tests --bench {{name}} -- --verbose {{args}}

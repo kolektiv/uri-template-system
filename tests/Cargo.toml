@@ -1,0 +1,29 @@
+[package]
+name = "uri-template-system-tests"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
+
+[dependencies]
+indexmap = { version = "2", features = ["serde"] }
+iri-string = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+uri-template-system-core = { path = "../core" }
+uritemplate-next = "0.2"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "comparison"
+harness = false
+
+[[bench]]
+name = "optimisation"
+harness = false
