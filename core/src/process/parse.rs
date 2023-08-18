@@ -25,6 +25,7 @@ where
 
 // Errors
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Error)]
 pub enum ParseError {
     #[error("{message} at position: {position}. expected: {expected}.")]

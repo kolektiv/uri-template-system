@@ -142,6 +142,7 @@ enum ExpressionNext {
 
 impl<'t> Expand for Expression<'t> {
     #[allow(clippy::cognitive_complexity)] // TODO: Reduce?
+    #[allow(clippy::equatable_if_let)]
     #[allow(clippy::too_many_lines)]
     fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
         let behaviour = self
