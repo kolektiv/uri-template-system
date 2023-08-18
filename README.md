@@ -5,9 +5,9 @@
 URI Templates [(RFC6570)](https://datatracker.ietf.org/doc/html/rfc6570) are an underrated tool for web programming. They regularise the construction of URIs and related forms, removing the need for ad-hoc string manipulation, and can help provide consistency across complex web applications.
 
 ```rust
-# use uri_template_system_core::{ Template, Value, Values };
-#
-let template = Template::parse("/hello/{name}{/library*}")?;
+use uri_template_system_core::{ Template, Value, Values };
+
+let template = Template::parse("/hello/{name}{/library*}").unwrap();
 let values = Values::default()
     .add("name", Value::item("world"))
     .add("library", Value::list(["uri", "template", "system"]));
@@ -16,8 +16,6 @@ assert_eq!(
     template.expand(&values).to_string(),
     "/hello/world/uri/template/system"
 );
-#
-# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 Beyond the scope of the RFC itself, they can also be used (with some judgement) for matching URIs and related forms as well, effectively providing the basis for a routing mechanism which can be driven from the same data as the linking mechanism. No more mismatches between linking and routing.
