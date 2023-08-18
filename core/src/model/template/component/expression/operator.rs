@@ -3,7 +3,10 @@ use crate::{
         Allow,
         Behaviour,
     },
-    process::parse::Parse,
+    process::parse::{
+        Parse,
+        ParseRef,
+    },
 };
 
 // =============================================================================
@@ -17,16 +20,17 @@ pub enum Operator<'t> {
     Level2(OpLevel2<'t>),
     Level3(OpLevel3<'t>),
 }
+
 macro_rules! operator {
     ($name:ident) => {
         #[derive(Debug, Eq, PartialEq)]
         pub struct $name<'t> {
-            raw: &'t str,
+            parse_ref: ParseRef<'t>,
         }
 
         impl<'t> $name<'t> {
-            pub const fn new(raw: &'t str) -> Self {
-                Self { raw }
+            pub const fn new(parse_ref: ParseRef<'t>) -> Self {
+                Self { parse_ref }
             }
         }
     };
@@ -66,16 +70,16 @@ operator!(QueryContinuation);
 
 #[rustfmt::skip]
 impl<'t> Parse<'t> for Option<Operator<'t>> {
-    fn parse(raw: &'t str) -> (usize, Self) {
+    fn parse(raw: &'t str, global: usize) -> (usize, Self) {
         raw.chars().next().and_then(|c| {
             let operator = match c {
-                '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(&raw[..1])))),
-                '#' => Some(Operator::Level2(OpLevel2::Fragment(Fragment::new(&raw[..1])))),
-                '.' => Some(Operator::Level3(OpLevel3::Label(Label::new(&raw[..1])))),
-                '/' => Some(Operator::Level3(OpLevel3::Path(Path::new(&raw[..1])))),
-                ';' => Some(Operator::Level3(OpLevel3::PathParameter(PathParameter::new(&raw[..1])))),
-                '?' => Some(Operator::Level3(OpLevel3::Query(Query::new(&raw[..1])))),
-                '&' => Some(Operator::Level3(OpLevel3::QueryContinuation(QueryContinuation::new(&raw[..1])))),
+                '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(ParseRef::new(global, global, &raw[..1]))))),
+                '#' => Some(Operator::Level2(OpLevel2::Fragment(Fragment::new(ParseRef::new(global, global, &raw[..1]))))),
+                '.' => Some(Operator::Level3(OpLevel3::Label(Label::new(ParseRef::new(global, global, &raw[..1]))))),
+                '/' => Some(Operator::Level3(OpLevel3::Path(Path::new(ParseRef::new(global, global, &raw[..1]))))),
+                ';' => Some(Operator::Level3(OpLevel3::PathParameter(PathParameter::new(ParseRef::new(global, global, &raw[..1]))))),
+                '?' => Some(Operator::Level3(OpLevel3::Query(Query::new(ParseRef::new(global, global, &raw[..1]))))),
+                '&' => Some(Operator::Level3(OpLevel3::QueryContinuation(QueryContinuation::new(ParseRef::new(global, global, &raw[..1]))))),
                 _ => None,
             };
 

@@ -8,11 +8,6 @@ use std::fmt::{
     Write,
 };
 
-use anyhow::{
-    Error,
-    Result,
-};
-
 use crate::{
     model::{
         template::component::expression::{
@@ -29,6 +24,8 @@ use crate::{
         expand::Expand,
         parse::{
             Parse,
+            ParseError,
+            ParseRef,
             TryParse,
         },
     },
@@ -50,19 +47,19 @@ use crate::{
 #[derive(Debug, Eq, PartialEq)]
 pub struct Expression<'t> {
     operator: Option<Operator<'t>>,
-    raw: &'t str,
+    parse_ref: ParseRef<'t>,
     variable_list: VariableList<'t>,
 }
 
 impl<'t> Expression<'t> {
     const fn new(
-        raw: &'t str,
+        parse_ref: ParseRef<'t>,
         operator: Option<Operator<'t>>,
         variable_list: VariableList<'t>,
     ) -> Self {
         Self {
             operator,
-            raw,
+            parse_ref,
             variable_list,
         }
     }
@@ -73,7 +70,7 @@ impl<'t> Expression<'t> {
 // Parse
 
 impl<'t> TryParse<'t> for Expression<'t> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut parsed_operator = None;
         let mut parsed_variable_list = Vec::new();
         let mut state = ExpressionState::default();
@@ -87,37 +84,52 @@ impl<'t> TryParse<'t> for Expression<'t> {
                     state.position += 1;
                 }
                 ExpressionNext::OpeningBrace => {
-                    return Err(Error::msg("expr: expected opening brace"))
+                    return Err(ParseError::UnexpectedInput {
+                        position: global + state.position,
+                        message: "unexpected input when parsing expression component".into(),
+                        expected: "opening brace ('{')".into(),
+                    });
                 }
                 ExpressionNext::Operator => {
-                    let (position, operator) = Option::<Operator>::parse(rest);
+                    let (position, operator) =
+                        Option::<Operator>::parse(rest, global + state.position);
 
                     parsed_operator = operator;
                     state.next = ExpressionNext::VariableList;
                     state.position += position;
                 }
-                ExpressionNext::VariableList => match VariableList::try_parse(rest) {
-                    Ok((position, variable_list)) => {
-                        parsed_variable_list.extend(variable_list);
-                        state.next = ExpressionNext::ClosingBrace;
-                        state.position += position;
+                ExpressionNext::VariableList => {
+                    match VariableList::try_parse(rest, global + state.position) {
+                        Ok((position, variable_list)) => {
+                            parsed_variable_list.extend(variable_list);
+                            state.next = ExpressionNext::ClosingBrace;
+                            state.position += position;
+                        }
+                        Err(err) => return Err(err),
                     }
-                    Err(err) => return Err(err),
-                },
+                }
                 ExpressionNext::ClosingBrace if rest.starts_with('}') => {
                     state.position += 1;
 
                     return Ok((
                         state.position,
                         Self::new(
-                            &raw[..state.position],
+                            ParseRef::new(
+                                global,
+                                global + state.position - 1,
+                                &raw[..state.position],
+                            ),
                             parsed_operator,
                             parsed_variable_list,
                         ),
                     ));
                 }
                 ExpressionNext::ClosingBrace => {
-                    return Err(Error::msg("exp: expected closing brace"))
+                    return Err(ParseError::UnexpectedInput {
+                        position: global + state.position,
+                        message: "unexpected input when parsing expression component".into(),
+                        expected: "closing brace ('}')".into(),
+                    });
                 }
             }
         }

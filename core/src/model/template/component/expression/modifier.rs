@@ -1,9 +1,8 @@
-use anyhow::{
-    Error,
-    Result,
+use crate::process::parse::{
+    ParseError,
+    ParseRef,
+    TryParse,
 };
-
-use crate::process::parse::TryParse;
 
 // =============================================================================
 // Modifier
@@ -19,24 +18,24 @@ pub enum Modifier<'t> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Explode<'t> {
-    raw: &'t str,
+    parse_ref: ParseRef<'t>,
 }
 
 impl<'t> Explode<'t> {
-    pub const fn new(raw: &'t str) -> Self {
-        Self { raw }
+    pub const fn new(parse_ref: ParseRef<'t>) -> Self {
+        Self { parse_ref }
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Prefix<'t> {
     length: usize,
-    raw: &'t str,
+    parse_ref: ParseRef<'t>,
 }
 
 impl<'t> Prefix<'t> {
-    pub const fn new(raw: &'t str, length: usize) -> Self {
-        Self { length, raw }
+    pub const fn new(parse_ref: ParseRef<'t>, length: usize) -> Self {
+        Self { length, parse_ref }
     }
 
     pub const fn length(&self) -> usize {
@@ -49,7 +48,7 @@ impl<'t> Prefix<'t> {
 // Parse
 
 impl<'t> TryParse<'t> for Option<Modifier<'t>> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut state = ModifierState::default();
 
         loop {
@@ -57,7 +56,14 @@ impl<'t> TryParse<'t> for Option<Modifier<'t>> {
 
             match &state.next {
                 ModifierNext::Symbol if rest.starts_with('*') => {
-                    return Ok((1, Some(Modifier::Explode(Explode::new(&raw[..1])))));
+                    return Ok((
+                        1,
+                        Some(Modifier::Explode(Explode::new(ParseRef::new(
+                            global,
+                            global,
+                            &raw[..1],
+                        )))),
+                    ));
                 }
                 ModifierNext::Symbol if rest.starts_with(':') => {
                     state.position += 1;
@@ -71,20 +77,32 @@ impl<'t> TryParse<'t> for Option<Modifier<'t>> {
                     state.next = ModifierNext::TrailingDigit;
                 }
                 ModifierNext::LeadingDigit => {
-                    return Err(Error::msg("prefix: numeric value expected"));
+                    return Err(ParseError::UnexpectedInput {
+                        position: global + state.position,
+                        message: "unexpected input while parsing prefix modifier - invalid character".into(),
+                        expected: "leading integer 1-9 (see: https://datatracker.ietf.org/doc/html/rfc6570#section-2.4.1)".into(),
+                    });
                 }
                 ModifierNext::TrailingDigit if rest.starts_with(is_digit) => {
                     if state.position < 4 {
                         state.position += 1;
                     } else {
-                        return Err(Error::msg("prefix: value from 1-9999 expected"));
+                        return Err(ParseError::UnexpectedInput {
+                            position: global + state.position,
+                            message: "unexpected input while parsing prefix modifier - out of range".into(),
+                            expected: "positive integer < 10000 (see: https://datatracker.ietf.org/doc/html/rfc6570#section-2.4.1)".into(),
+                        });
                     }
                 }
                 ModifierNext::TrailingDigit => {
                     return Ok((
                         state.position,
                         Some(Modifier::Prefix(Prefix::new(
-                            &raw[..state.position],
+                            ParseRef::new(
+                                global,
+                                global + state.position - 1,
+                                &raw[..state.position],
+                            ),
                             raw[1..state.position].parse::<usize>().unwrap(),
                         ))),
                     ))

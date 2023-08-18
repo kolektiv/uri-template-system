@@ -36,5 +36,8 @@ pub use crate::{
             Values,
         },
     },
-    process::expand::Expansion,
+    process::{
+        expand::Expansion,
+        parse::ParseError,
+    },
 };

@@ -6,8 +6,6 @@ use std::fmt::{
     Formatter,
 };
 
-use anyhow::Result;
-
 use crate::{
     model::template::component::{
         expression::Expression,
@@ -15,7 +13,10 @@ use crate::{
     },
     process::{
         expand::Expand,
-        parse::TryParse,
+        parse::{
+            ParseError,
+            TryParse,
+        },
     },
     Values,
 };
@@ -37,7 +38,7 @@ pub enum Component<'t> {
 // Parse
 
 impl<'t> TryParse<'t> for Vec<Component<'t>> {
-    fn try_parse(raw: &'t str) -> Result<(usize, Self)> {
+    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut parsed_components = Self::new(); // TODO: Check if a default capacity estimation improves perf
         let mut state = ComponentState::default();
 
@@ -49,10 +50,10 @@ impl<'t> TryParse<'t> for Vec<Component<'t>> {
             }
 
             let parsed = if rest.starts_with('{') {
-                Expression::try_parse(rest)
+                Expression::try_parse(rest, global + state.position)
                     .map(|(position, expression)| (position, Component::Expression(expression)))
             } else {
-                Literal::try_parse(rest)
+                Literal::try_parse(rest, global + state.position)
                     .map(|(position, literal)| (position, Component::Literal(literal)))
             };
 
