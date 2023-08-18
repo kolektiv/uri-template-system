@@ -25,7 +25,6 @@ use crate::{
         parse::{
             Parse,
             ParseError,
-            ParseRef,
             TryParse,
         },
     },
@@ -46,20 +45,14 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Expression<'t> {
-    operator: Option<Operator<'t>>,
-    parse_ref: ParseRef<'t>,
+    operator: Option<Operator>,
     variable_list: VariableList<'t>,
 }
 
 impl<'t> Expression<'t> {
-    const fn new(
-        parse_ref: ParseRef<'t>,
-        operator: Option<Operator<'t>>,
-        variable_list: VariableList<'t>,
-    ) -> Self {
+    const fn new(operator: Option<Operator>, variable_list: VariableList<'t>) -> Self {
         Self {
             operator,
-            parse_ref,
             variable_list,
         }
     }
@@ -113,15 +106,7 @@ impl<'t> TryParse<'t> for Expression<'t> {
 
                     return Ok((
                         state.position,
-                        Self::new(
-                            ParseRef::new(
-                                global,
-                                global + state.position - 1,
-                                &raw[..state.position],
-                            ),
-                            parsed_operator,
-                            parsed_variable_list,
-                        ),
+                        Self::new(parsed_operator, parsed_variable_list),
                     ));
                 }
                 ExpressionNext::ClosingBrace => {
@@ -216,7 +201,7 @@ impl<'t> Expand for Expression<'t> {
                 }
 
                 match modifier {
-                    Some(Modifier::Prefix(prefix)) => {
+                    Some(Modifier::Prefix(length)) => {
                         // * if a prefix modifier is present and the prefix length is less than the
                         //   value string length in number of Unicode characters, append that number
                         //   of characters from the beginning of the value string to the result
@@ -224,11 +209,7 @@ impl<'t> Expand for Expression<'t> {
                         //   set, while taking care not to split multi-octet or pct-encoded triplet
                         //   characters that represent a single Unicode code point;
 
-                        let pos: usize = value
-                            .chars()
-                            .take(prefix.length())
-                            .map(char::len_utf8)
-                            .sum();
+                        let pos: usize = value.chars().take(*length).map(char::len_utf8).sum();
 
                         f.encode(&value[..pos], &matcher)?;
                     }
@@ -239,7 +220,7 @@ impl<'t> Expand for Expression<'t> {
                         f.encode(value, &matcher)?;
                     }
                 };
-            } else if let Some(Modifier::Explode(_)) = modifier {
+            } else if let Some(Modifier::Explode) = modifier {
                 // else if an explode modifier is given, then
 
                 if behaviour.named {

@@ -21,19 +21,6 @@ where
     fn try_parse(raw: &'t str, base: usize) -> Result<(usize, Self), ParseError>;
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ParseRef<'t> {
-    pub start: usize,
-    pub end: usize,
-    pub raw: &'t str,
-}
-
-impl<'t> ParseRef<'t> {
-    pub const fn new(start: usize, end: usize, raw: &'t str) -> Self {
-        Self { start, end, raw }
-    }
-}
-
 // -----------------------------------------------------------------------------
 
 // Errors

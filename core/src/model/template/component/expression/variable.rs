@@ -2,7 +2,6 @@ use crate::{
     model::template::component::expression::modifier::Modifier,
     process::parse::{
         ParseError,
-        ParseRef,
         TryParse,
     },
     util::satisfy::{
@@ -22,21 +21,21 @@ use crate::{
 pub type VariableList<'t> = Vec<VariableSpecification<'t>>;
 
 #[allow(clippy::module_name_repetitions)]
-pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier<'t>>);
+pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier>);
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Eq, PartialEq)]
 pub struct VariableName<'t> {
-    parse_ref: ParseRef<'t>,
+    name: &'t str,
 }
 
 impl<'t> VariableName<'t> {
-    const fn new(parse_ref: ParseRef<'t>) -> Self {
-        Self { parse_ref }
+    const fn new(name: &'t str) -> Self {
+        Self { name }
     }
 
     pub const fn name(&self) -> &str {
-        self.parse_ref.raw
+        self.name
     }
 }
 
@@ -130,14 +129,7 @@ impl<'t> TryParse<'t> for VariableName<'t> {
                     state.next = VariableNameNext::VariableCharacters;
                 }
                 VariableNameNext::Dot => {
-                    return Ok((
-                        state.position,
-                        VariableName::new(ParseRef::new(
-                            global,
-                            global + state.position - 1,
-                            &raw[..state.position],
-                        )),
-                    ));
+                    return Ok((state.position, VariableName::new(&raw[..state.position])));
                 }
             }
         }

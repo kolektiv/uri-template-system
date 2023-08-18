@@ -17,7 +17,7 @@ use crate::{
         },
         parse::{
             ParseError,
-            ParseRef,
+            // ParseRef,
             TryParse,
         },
     },
@@ -32,7 +32,6 @@ use crate::{
 #[derive(Debug, Eq, PartialEq)]
 pub struct Template<'t> {
     components: Vec<Component<'t>>,
-    parse_ref: ParseRef<'t>,
 }
 
 impl<'t> Template<'t> {
@@ -45,11 +44,8 @@ impl<'t> Template<'t> {
         Self::try_parse(raw, 0).map(|(_, template)| template)
     }
 
-    const fn new(parse_ref: ParseRef<'t>, components: Vec<Component<'t>>) -> Self {
-        Self {
-            components,
-            parse_ref,
-        }
+    const fn new(components: Vec<Component<'t>>) -> Self {
+        Self { components }
     }
 }
 
@@ -59,12 +55,8 @@ impl<'t> Template<'t> {
 
 impl<'t> TryParse<'t> for Template<'t> {
     fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
-        Vec::<Component<'t>>::try_parse(raw, global).map(|(position, components)| {
-            (
-                position,
-                Self::new(ParseRef::new(0, position - 1, raw), components),
-            )
-        })
+        Vec::<Component<'t>>::try_parse(raw, global)
+            .map(|(position, components)| (position, Self::new(components)))
     }
 }
 

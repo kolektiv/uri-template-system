@@ -1,6 +1,5 @@
 use crate::process::parse::{
     ParseError,
-    ParseRef,
     TryParse,
 };
 
@@ -11,43 +10,16 @@ use crate::process::parse::{
 // Types
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Modifier<'t> {
-    Explode(Explode<'t>),
-    Prefix(Prefix<'t>),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Explode<'t> {
-    parse_ref: ParseRef<'t>,
-}
-
-impl<'t> Explode<'t> {
-    pub const fn new(parse_ref: ParseRef<'t>) -> Self {
-        Self { parse_ref }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Prefix<'t> {
-    length: usize,
-    parse_ref: ParseRef<'t>,
-}
-
-impl<'t> Prefix<'t> {
-    pub const fn new(parse_ref: ParseRef<'t>, length: usize) -> Self {
-        Self { length, parse_ref }
-    }
-
-    pub const fn length(&self) -> usize {
-        self.length
-    }
+pub enum Modifier {
+    Explode,
+    Prefix(usize),
 }
 
 // -----------------------------------------------------------------------------
 
 // Parse
 
-impl<'t> TryParse<'t> for Option<Modifier<'t>> {
+impl<'t> TryParse<'t> for Option<Modifier> {
     fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
         let mut state = ModifierState::default();
 
@@ -56,14 +28,7 @@ impl<'t> TryParse<'t> for Option<Modifier<'t>> {
 
             match &state.next {
                 ModifierNext::Symbol if rest.starts_with('*') => {
-                    return Ok((
-                        1,
-                        Some(Modifier::Explode(Explode::new(ParseRef::new(
-                            global,
-                            global,
-                            &raw[..1],
-                        )))),
-                    ));
+                    return Ok((1, Some(Modifier::Explode)));
                 }
                 ModifierNext::Symbol if rest.starts_with(':') => {
                     state.position += 1;
@@ -97,15 +62,10 @@ impl<'t> TryParse<'t> for Option<Modifier<'t>> {
                 ModifierNext::TrailingDigit => {
                     return Ok((
                         state.position,
-                        Some(Modifier::Prefix(Prefix::new(
-                            ParseRef::new(
-                                global,
-                                global + state.position - 1,
-                                &raw[..state.position],
-                            ),
+                        Some(Modifier::Prefix(
                             raw[1..state.position].parse::<usize>().unwrap(),
-                        ))),
-                    ))
+                        )),
+                    ));
                 }
             }
         }

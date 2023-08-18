@@ -9,7 +9,6 @@ use crate::{
         expand::Expand,
         parse::{
             ParseError,
-            ParseRef,
             TryParse,
         },
     },
@@ -33,12 +32,12 @@ use crate::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Literal<'t> {
-    parse_ref: ParseRef<'t>,
+    value: &'t str,
 }
 
 impl<'t> Literal<'t> {
-    pub const fn new(parse_ref: ParseRef<'t>) -> Self {
-        Self { parse_ref }
+    pub const fn new(value: &'t str) -> Self {
+        Self { value }
     }
 }
 
@@ -54,7 +53,7 @@ impl<'t> TryParse<'t> for Literal<'t> {
                 message: "unexpected input parsing literal component".into(),
                 expected: "valid literal characters (see: https://datatracker.ietf.org/doc/html/rfc6570#section-2.1)".into(),
             }),
-            n => Ok((n, Literal::new(ParseRef::new(global, global + n - 1, &raw[..n])))),
+            n => Ok((n, Literal::new(&raw[..n]))),
         }
     }
 }
@@ -120,6 +119,6 @@ const fn is_literal_unicode(c: char) -> bool {
 
 impl<'t> Expand for Literal<'t> {
     fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
-        f.encode(self.parse_ref.raw, &satisfy::unreserved_or_reserved())
+        f.encode(self.value, &satisfy::unreserved_or_reserved())
     }
 }

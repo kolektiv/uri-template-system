@@ -3,10 +3,7 @@ use crate::{
         Allow,
         Behaviour,
     },
-    process::parse::{
-        Parse,
-        ParseRef,
-    },
+    process::parse::Parse,
 };
 
 // =============================================================================
@@ -16,76 +13,53 @@ use crate::{
 // Types
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Operator<'t> {
-    Level2(OpLevel2<'t>),
-    Level3(OpLevel3<'t>),
-}
-
-macro_rules! operator {
-    ($name:ident) => {
-        #[derive(Debug, Eq, PartialEq)]
-        pub struct $name<'t> {
-            parse_ref: ParseRef<'t>,
-        }
-
-        impl<'t> $name<'t> {
-            pub const fn new(parse_ref: ParseRef<'t>) -> Self {
-                Self { parse_ref }
-            }
-        }
-    };
+pub enum Operator {
+    Level2(OpLevel2),
+    Level3(OpLevel3),
 }
 
 // Operator - Level 2
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum OpLevel2<'t> {
-    Fragment(Fragment<'t>),
-    Reserved(Reserved<'t>),
+pub enum OpLevel2 {
+    Fragment,
+    Reserved,
 }
-
-operator!(Fragment);
-operator!(Reserved);
 
 // Operator - Level 3
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum OpLevel3<'t> {
-    Label(Label<'t>),
-    Path(Path<'t>),
-    PathParameter(PathParameter<'t>),
-    Query(Query<'t>),
-    QueryContinuation(QueryContinuation<'t>),
+pub enum OpLevel3 {
+    Label,
+    Path,
+    PathParameter,
+    Query,
+    QueryContinuation,
 }
-
-operator!(Label);
-operator!(Path);
-operator!(PathParameter);
-operator!(Query);
-operator!(QueryContinuation);
 
 // -----------------------------------------------------------------------------
 
 // Parse
 
-#[rustfmt::skip]
-impl<'t> Parse<'t> for Option<Operator<'t>> {
-    fn parse(raw: &'t str, global: usize) -> (usize, Self) {
-        raw.chars().next().and_then(|c| {
-            let operator = match c {
-                '+' => Some(Operator::Level2(OpLevel2::Reserved(Reserved::new(ParseRef::new(global, global, &raw[..1]))))),
-                '#' => Some(Operator::Level2(OpLevel2::Fragment(Fragment::new(ParseRef::new(global, global, &raw[..1]))))),
-                '.' => Some(Operator::Level3(OpLevel3::Label(Label::new(ParseRef::new(global, global, &raw[..1]))))),
-                '/' => Some(Operator::Level3(OpLevel3::Path(Path::new(ParseRef::new(global, global, &raw[..1]))))),
-                ';' => Some(Operator::Level3(OpLevel3::PathParameter(PathParameter::new(ParseRef::new(global, global, &raw[..1]))))),
-                '?' => Some(Operator::Level3(OpLevel3::Query(Query::new(ParseRef::new(global, global, &raw[..1]))))),
-                '&' => Some(Operator::Level3(OpLevel3::QueryContinuation(QueryContinuation::new(ParseRef::new(global, global, &raw[..1]))))),
-                _ => None,
-            };
+impl<'t> Parse<'t> for Option<Operator> {
+    fn parse(raw: &'t str, _global: usize) -> (usize, Self) {
+        raw.chars()
+            .next()
+            .and_then(|c| {
+                let operator = match c {
+                    '+' => Some(Operator::Level2(OpLevel2::Reserved)),
+                    '#' => Some(Operator::Level2(OpLevel2::Fragment)),
+                    '.' => Some(Operator::Level3(OpLevel3::Label)),
+                    '/' => Some(Operator::Level3(OpLevel3::Path)),
+                    ';' => Some(Operator::Level3(OpLevel3::PathParameter)),
+                    '?' => Some(Operator::Level3(OpLevel3::Query)),
+                    '&' => Some(Operator::Level3(OpLevel3::QueryContinuation)),
+                    _ => None,
+                };
 
-            operator.map(|operator| (1, Some(operator)))
-        })
-        .unwrap_or((0, None))
+                operator.map(|operator| (1, Some(operator)))
+            })
+            .unwrap_or((0, None))
     }
 }
 
@@ -93,51 +67,90 @@ impl<'t> Parse<'t> for Option<Operator<'t>> {
 
 // Expand
 
-impl<'t> Operator<'t> {
+impl Operator {
     pub fn behaviour(&self) -> &Behaviour {
         match self {
             Self::Level2(op_level_2) => match op_level_2 {
-                OpLevel2::Fragment(_) => &FRAGMENT_BEHAVIOUR,
-                OpLevel2::Reserved(_) => &RESERVED_BEHAVIOUR,
+                OpLevel2::Fragment => &FRAGMENT_BEHAVIOUR,
+                OpLevel2::Reserved => &RESERVED_BEHAVIOUR,
             },
             Self::Level3(op_level_3) => match op_level_3 {
-                OpLevel3::Label(_) => &LABEL_BEHAVIOUR,
-                OpLevel3::Path(_) => &PATH_BEHAVIOUR,
-                OpLevel3::PathParameter(_) => &PATH_PARAMETER_BEHAVIOUR,
-                OpLevel3::Query(_) => &QUERY_BEHAVIOUR,
-                OpLevel3::QueryContinuation(_) => &QUERY_CONTINUATION_BEHAVIOUR,
+                OpLevel3::Label => &LABEL_BEHAVIOUR,
+                OpLevel3::Path => &PATH_BEHAVIOUR,
+                OpLevel3::PathParameter => &PATH_PARAMETER_BEHAVIOUR,
+                OpLevel3::Query => &QUERY_BEHAVIOUR,
+                OpLevel3::QueryContinuation => &QUERY_CONTINUATION_BEHAVIOUR,
             },
         }
     }
 }
 
-macro_rules! behaviour {
-    ($name:ident, $first:stmt, $sep:literal, $named:literal, $ifemp:stmt, $allow:ty) => {
-        paste::paste! {
-            pub static [< $name:snake:upper _BEHAVIOUR >]: Behaviour = Behaviour {
-                first: $first,
-                sep: $sep,
-                named: $named,
-                ifemp: $ifemp,
-                allow: $allow
-            };
-        }
-    };
-}
-
 // Operator - None
 
-behaviour!(Default, None, ',', false, None, Allow::U);
+pub static DEFAULT_BEHAVIOUR: Behaviour = Behaviour {
+    first: None,
+    sep: ',',
+    named: false,
+    ifemp: None,
+    allow: Allow::U,
+};
 
 // Operator - Level 2
 
-behaviour!(Fragment, Some('#'), ',', false, None, Allow::UR);
-behaviour!(Reserved, None, ',', false, None, Allow::UR);
+pub static FRAGMENT_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('#'),
+    sep: ',',
+    named: false,
+    ifemp: None,
+    allow: Allow::UR,
+};
+
+pub static RESERVED_BEHAVIOUR: Behaviour = Behaviour {
+    first: None,
+    sep: ',',
+    named: false,
+    ifemp: None,
+    allow: Allow::UR,
+};
 
 // Operator - Level 3
 
-behaviour!(Label, Some('.'), '.', false, None, Allow::U);
-behaviour!(Path, Some('/'), '/', false, None, Allow::U);
-behaviour!(PathParameter, Some(';'), ';', true, None, Allow::U);
-behaviour!(Query, Some('?'), '&', true, Some('='), Allow::U);
-behaviour!(QueryContinuation, Some('&'), '&', true, Some('='), Allow::U);
+pub static LABEL_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('.'),
+    sep: '.',
+    named: false,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+pub static PATH_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('/'),
+    sep: '/',
+    named: false,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+pub static PATH_PARAMETER_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some(';'),
+    sep: ';',
+    named: true,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+pub static QUERY_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('?'),
+    sep: '&',
+    named: true,
+    ifemp: Some('='),
+    allow: Allow::U,
+};
+
+pub static QUERY_CONTINUATION_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('&'),
+    sep: '&',
+    named: true,
+    ifemp: Some('='),
+    allow: Allow::U,
+};
