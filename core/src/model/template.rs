@@ -53,7 +53,7 @@ impl<'t> Template<'t> {
     }
 
     /// Parses a string representing a potential template, and returns a new
-    /// template instance if valid. See https://datatracker.ietf.org/doc/html/rfc6570
+    /// template instance if valid. See <https://datatracker.ietf.org/doc/html/rfc6570>
     /// for the grammar of a valid URI Template. `uri-template-system` supports
     /// all operators and modifiers up-to and including Level 4.
     ///

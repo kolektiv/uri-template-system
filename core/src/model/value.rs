@@ -14,6 +14,7 @@ pub struct Values {
 }
 
 impl Values {
+    #[must_use]
     pub fn add(mut self, key: impl Into<String>, value: impl Into<Value>) -> Self {
         self.values.insert(key.into(), value.into());
         self
@@ -47,7 +48,7 @@ impl Value {
         U: Into<String>,
         V: Into<String>,
     {
-        Value::AssociativeArray(
+        Self::AssociativeArray(
             value
                 .into_iter()
                 .map(|(u, v)| (u.into(), v.into()))
@@ -67,7 +68,7 @@ impl Value {
         T: IntoIterator<Item = U>,
         U: Into<String>,
     {
-        Self::List(value.into_iter().map(|u| u.into()).collect())
+        Self::List(value.into_iter().map(Into::into).collect())
     }
 }
 
