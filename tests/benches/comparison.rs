@@ -8,6 +8,7 @@ use criterion::{
 use uri_template_system_tests::{
     fixtures::{
         self,
+        Case,
         Group,
     },
     harnesses::{
@@ -39,7 +40,7 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
             let values = harness.prepare(group.variables.clone());
 
             b.iter_batched_ref(
-                || setup(&group),
+                || setup(&group.cases),
                 |(input, output): &mut (Vec<String>, Vec<String>)| {
                     output.extend(
                         input
@@ -55,7 +56,7 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
             let harness = uri_template_next::Harness;
 
             b.iter_batched_ref(
-                || setup(&group),
+                || setup(&group.cases),
                 |(input, output): &mut (Vec<String>, Vec<String>)| {
                     output.extend(
                         input
@@ -72,7 +73,7 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
             let context = harness.prepare(group.variables.clone());
 
             b.iter_batched_ref(
-                || setup(&group),
+                || setup(&group.cases),
                 |(input, output): &mut (Vec<String>, Vec<String>)| {
                     output.extend(
                         input
@@ -88,10 +89,10 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
     g.finish();
 }
 
-fn setup(group: &Group) -> (Vec<String>, Vec<String>) {
+fn setup(cases: &Vec<Case>) -> (Vec<String>, Vec<String>) {
     (
-        group.cases.iter().map(|c| c.template.clone()).collect(),
-        Vec::with_capacity(group.cases.len()),
+        cases.iter().map(|c| c.template.clone()).collect(),
+        Vec::with_capacity(cases.len()),
     )
 }
 
