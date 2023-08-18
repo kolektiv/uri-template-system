@@ -2,6 +2,7 @@
 name = "uri-template-system-tests"
 authors.workspace = true
 categories.workspace = true
+description = "Tests, Benchmarks, etc. for URI Template System"
 documentation.workspace = true
 edition.workspace = true
 homepage.workspace = true

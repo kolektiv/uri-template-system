@@ -2,6 +2,7 @@
 name = "uri-template-system-core"
 authors.workspace = true
 categories.workspace = true
+description = "URI Template System Core (prefer top-level URI Template System)"
 documentation.workspace = true
 edition.workspace = true
 homepage.workspace = true

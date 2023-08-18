@@ -2,6 +2,7 @@
 name = "uri-template-system"
 authors.workspace = true
 categories.workspace = true
+description = "URI Template (RFC 6570) parsing, expansion and matching"
 documentation.workspace = true
 edition.workspace = true
 homepage.workspace = true
@@ -10,4 +11,4 @@ readme.workspace = true
 version.workspace = true
 
 [dependencies]
-uri-template-system-core = { path = "../core" }
+uri-template-system-core = { path = "../core", version = "0.1.0" }
