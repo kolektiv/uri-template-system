@@ -85,11 +85,9 @@ static DATA: OnceLock<(Vec<Group>, Vec<Group>, Vec<Group>)> = OnceLock::new();
 fn data() -> &'static (Vec<Group>, Vec<Group>, Vec<Group>) {
     DATA.get_or_init(|| {
         (
-            load(include_str!("../../fixtures/data/spec-examples.json")),
-            load(include_str!(
-                "../../fixtures/data/spec-examples-by-section.json"
-            )),
-            load(include_str!("../../fixtures/data/extended-tests.json")),
+            load(include_str!("../data/spec-examples.json")),
+            load(include_str!("../data/spec-examples-by-section.json")),
+            load(include_str!("../data/extended-tests.json")),
         )
     })
 }
