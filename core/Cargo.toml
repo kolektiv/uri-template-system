@@ -7,7 +7,7 @@ documentation.workspace = true
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
-readme.workspace = true
+readme = "README.md"
 version.workspace = true
 
 [dependencies]
