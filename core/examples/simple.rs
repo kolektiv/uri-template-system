@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .add("library", Value::list(["uri", "template", "system"]));
 
     assert_eq!(
-        template.expand(&values).to_string(),
+        template.expand(&values)?,
         "/hello/world/uri/template/system"
     );
 

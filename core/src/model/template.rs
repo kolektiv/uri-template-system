@@ -1,9 +1,6 @@
 mod component;
 
-use std::fmt::{
-    self,
-    Formatter,
-};
+use std::fmt::Write;
 
 use crate::{
     model::{
@@ -13,11 +10,10 @@ use crate::{
     process::{
         expand::{
             Expand,
-            Expansion,
+            ExpandError,
         },
         parse::{
             ParseError,
-            // ParseRef,
             TryParse,
         },
     },
@@ -37,8 +33,8 @@ pub struct Template<'t> {
 }
 
 impl<'t> Template<'t> {
-    /// Creates a new `Expansion` using the given `Values`, which may then be
-    /// rendered using the `to_string` function provided by the `Display` trait.
+    /// Expands the template using the given `Values`, returning a string if
+    /// expansion was successful.
     ///
     /// ```
     /// # use uri_template_system_core::{ Template, Values, Value };
@@ -46,14 +42,17 @@ impl<'t> Template<'t> {
     /// let template = Template::parse("hello/{name}!").unwrap();
     /// let values = Values::default().add("name", Value::item("world"));
     ///
-    /// assert_eq!("hello/world!", template.expand(&values).to_string());
-    #[must_use]
-    pub const fn expand<'e>(&'e self, values: &'e Values) -> Expansion<'e, 't> {
-        Expansion::new(self, values)
+    /// assert_eq!("hello/world!", template.expand(&values).unwrap());
+    pub fn expand(&self, values: &Values) -> Result<String, ExpandError> {
+        let mut expanded = String::default();
+
+        Expand::expand(self, values, &mut expanded)?;
+
+        Ok(expanded)
     }
 
     /// Parses a string representing a potential template, and returns a new
-    /// template instance if valid. See <https://datatracker.ietf.org/doc/html/rfc6570>
+    /// `Template` instance if valid. See <https://datatracker.ietf.org/doc/html/rfc6570>
     /// for the grammar of a valid URI Template. `uri-template-system` supports
     /// all operators and modifiers up-to and including Level 4.
     ///
@@ -89,9 +88,9 @@ impl<'t> TryParse<'t> for Template<'t> {
 // Expand
 
 impl<'t> Expand for Template<'t> {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
         self.components
             .iter()
-            .try_for_each(|component| component.expand(values, f))
+            .try_for_each(|component| component.expand(values, write))
     }
 }

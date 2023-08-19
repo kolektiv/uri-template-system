@@ -1,10 +1,7 @@
 mod expression;
 mod literal;
 
-use std::fmt::{
-    self,
-    Formatter,
-};
+use std::fmt::Write;
 
 use crate::{
     model::template::component::{
@@ -12,7 +9,10 @@ use crate::{
         literal::Literal,
     },
     process::{
-        expand::Expand,
+        expand::{
+            Expand,
+            ExpandError,
+        },
         parse::{
             ParseError,
             TryParse,
@@ -80,10 +80,10 @@ struct ComponentState {
 // Expand
 
 impl<'t> Expand for Component<'t> {
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
         match self {
-            Self::Expression(expression) => expression.expand(values, f),
-            Self::Literal(literal) => literal.expand(values, f),
+            Self::Expression(expression) => expression.expand(values, write),
+            Self::Literal(literal) => literal.expand(values, write),
         }
     }
 }

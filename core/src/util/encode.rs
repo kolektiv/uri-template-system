@@ -1,5 +1,5 @@
 use std::fmt::{
-    self,
+    Result,
     Write,
 };
 
@@ -12,14 +12,18 @@ use crate::util::satisfy::Satisfy;
 // Traits
 
 pub trait Encode {
-    fn encode(&mut self, raw: &str, matcher: &impl Satisfy) -> fmt::Result;
+    fn encode(&mut self, raw: &str, matcher: &impl Satisfy) -> Result;
 }
+
+// -----------------------------------------------------------------------------
+
+// Implementations
 
 impl<T> Encode for T
 where
     T: Write,
 {
-    fn encode(&mut self, raw: &str, satisifer: &impl Satisfy) -> fmt::Result {
+    fn encode(&mut self, raw: &str, satisifer: &impl Satisfy) -> Result {
         let mut position = 0;
 
         loop {

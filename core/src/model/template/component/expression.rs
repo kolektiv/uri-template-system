@@ -2,11 +2,7 @@ mod modifier;
 mod operator;
 mod variable;
 
-use std::fmt::{
-    self,
-    Formatter,
-    Write,
-};
+use std::fmt::Write;
 
 use crate::{
     model::{
@@ -21,7 +17,10 @@ use crate::{
         },
     },
     process::{
-        expand::Expand,
+        expand::{
+            Expand,
+            ExpandError,
+        },
         parse::{
             Parse,
             ParseError,
@@ -144,7 +143,7 @@ impl<'t> Expand for Expression<'t> {
     #[allow(clippy::cognitive_complexity)] // TODO: Reduce?
     #[allow(clippy::equatable_if_let)]
     #[allow(clippy::too_many_lines)]
-    fn expand(&self, values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
         let behaviour = self
             .operator
             .as_ref()
@@ -170,12 +169,12 @@ impl<'t> Expand for Expression<'t> {
 
             if first {
                 if let Some(c) = behaviour.first {
-                    f.write_char(c)?;
+                    write.write_char(c)?;
                 }
 
                 first = false;
             } else {
-                f.write_char(behaviour.sep)?;
+                write.write_char(behaviour.sep)?;
             }
 
             if let Value::Item(value) = value {
@@ -185,19 +184,19 @@ impl<'t> Expand for Expression<'t> {
                     // * if named is true, append the varname to the result string using the same
                     //   encoding process as for literals, and
 
-                    f.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
+                    write.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
 
                     if value.is_empty() {
                         // + if the value is empty, append the ifemp string to the result string and
                         //   skip to the next varspec;
 
                         if let Some(c) = behaviour.ifemp {
-                            f.write_char(c)?;
+                            write.write_char(c)?;
                         }
                     } else {
                         // + otherwise, append "=" to the result string.
 
-                        f.write_char('=')?;
+                        write.write_char('=')?;
                     }
                 }
 
@@ -212,13 +211,13 @@ impl<'t> Expand for Expression<'t> {
 
                         let pos: usize = value.chars().take(*length).map(char::len_utf8).sum();
 
-                        f.encode(&value[..pos], &matcher)?;
+                        write.encode(&value[..pos], &matcher)?;
                     }
                     _ => {
                         // * otherwise, append the value to the result string after pct-encoding any
                         //   characters that are not in the allow set.
 
-                        f.encode(value, &matcher)?;
+                        write.encode(value, &matcher)?;
                     }
                 };
             } else if let Some(Modifier::Explode) = modifier {
@@ -238,13 +237,13 @@ impl<'t> Expand for Expression<'t> {
                             if first {
                                 first = false;
                             } else {
-                                f.write_char(behaviour.sep)?;
+                                write.write_char(behaviour.sep)?;
                             }
 
                             // + if this is a pair, append the name to the result string using the
                             //   same encoding process as for literals;
 
-                            f.encode(name, &satisfy::unreserved_or_reserved())?;
+                            write.encode(name, &satisfy::unreserved_or_reserved())?;
 
                             // + if the member/value is empty, append the ifemp string to the result
                             //   string; otherwise, append "=" and the member/value to the result
@@ -253,11 +252,11 @@ impl<'t> Expand for Expression<'t> {
 
                             if value.is_empty() {
                                 if let Some(c) = behaviour.ifemp {
-                                    f.write_char(c)?;
+                                    write.write_char(c)?;
                                 }
                             } else {
-                                f.write_char('=')?;
-                                f.encode(value, &matcher)?;
+                                write.write_char('=')?;
+                                write.encode(value, &matcher)?;
                             }
                         }
                     } else if let Value::List(value) = value {
@@ -270,13 +269,13 @@ impl<'t> Expand for Expression<'t> {
                             if first {
                                 first = false;
                             } else {
-                                f.write_char(behaviour.sep)?;
+                                write.write_char(behaviour.sep)?;
                             }
 
                             // + if this is a list, append the varname to the result string using
                             //   the same encoding process as for literals;
 
-                            f.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
+                            write.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
 
                             // + if the member/value is empty, append the ifemp string to the result
                             //   string; otherwise, append "=" and the member/value to the result
@@ -285,11 +284,11 @@ impl<'t> Expand for Expression<'t> {
 
                             if value.is_empty() {
                                 if let Some(c) = behaviour.ifemp {
-                                    f.write_char(c)?;
+                                    write.write_char(c)?;
                                 }
                             } else {
-                                f.write_char('=')?;
-                                f.encode(value, &matcher)?;
+                                write.write_char('=')?;
+                                write.encode(value, &matcher)?;
                             }
                         }
                     }
@@ -309,13 +308,13 @@ impl<'t> Expand for Expression<'t> {
                                 if first {
                                     first = false;
                                 } else {
-                                    f.write_char(behaviour.sep)?;
+                                    write.write_char(behaviour.sep)?;
                                 }
                             }
 
-                            f.encode(name, &matcher)?;
-                            f.write_char('=')?;
-                            f.encode(value, &matcher)?;
+                            write.encode(name, &matcher)?;
+                            write.write_char('=')?;
+                            write.encode(value, &matcher)?;
                         }
                     } else if let Value::List(value) = value {
                         // + if this is a list, append each defined list member to the result
@@ -330,11 +329,11 @@ impl<'t> Expand for Expression<'t> {
                                 if first {
                                     first = false;
                                 } else {
-                                    f.write_char(behaviour.sep)?;
+                                    write.write_char(behaviour.sep)?;
                                 }
                             }
 
-                            f.encode(value, &matcher)?;
+                            write.encode(value, &matcher)?;
                         }
                     }
                 }
@@ -345,7 +344,7 @@ impl<'t> Expand for Expression<'t> {
                     // * if named is true, append the varname to the result string using the same
                     //   encoding process as for literals, and
 
-                    f.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
+                    write.encode(var_name.name(), &satisfy::unreserved_or_reserved())?;
 
                     // + if the value is empty, append the ifemp string to the result string and
                     //   skip to the next varspec;
@@ -354,7 +353,7 @@ impl<'t> Expand for Expression<'t> {
                     // NOTE: Empty values are not meaningful currently, so this logic is skipped for
                     // now
 
-                    f.write_char('=')?;
+                    write.write_char('=')?;
                 }
 
                 if let Value::AssociativeArray(value) = value {
@@ -371,12 +370,12 @@ impl<'t> Expand for Expression<'t> {
                             if first {
                                 first = false;
                             } else {
-                                f.write_char(',')?;
+                                write.write_char(',')?;
                             }
 
-                            f.encode(name, &matcher)?;
-                            f.write_char(',')?;
-                            f.encode(value, &matcher)?;
+                            write.encode(name, &matcher)?;
+                            write.write_char(',')?;
+                            write.encode(value, &matcher)?;
                         }
                     }
                 } else if let Value::List(value) = value {
@@ -392,10 +391,10 @@ impl<'t> Expand for Expression<'t> {
                             if first {
                                 first = false;
                             } else {
-                                f.write_char(',')?;
+                                write.write_char(',')?;
                             }
 
-                            f.encode(value, &matcher)?;
+                            write.encode(value, &matcher)?;
                         }
                     }
                 }

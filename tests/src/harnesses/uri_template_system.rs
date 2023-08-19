@@ -20,9 +20,6 @@ impl super::Harness for Harness {
     }
 
     fn test(&self, template: &str, values: &Self::Values) -> String {
-        Template::parse(template)
-            .unwrap()
-            .expand(values)
-            .to_string()
+        Template::parse(template).unwrap().expand(values).unwrap()
     }
 }

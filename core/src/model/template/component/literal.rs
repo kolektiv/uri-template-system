@@ -1,12 +1,12 @@
-use std::fmt::{
-    self,
-    Formatter,
-};
+use std::fmt::Write;
 
 use crate::{
     model::value::Values,
     process::{
-        expand::Expand,
+        expand::{
+            Expand,
+            ExpandError,
+        },
         parse::{
             ParseError,
             TryParse,
@@ -118,7 +118,9 @@ const fn is_literal_unicode(c: char) -> bool {
 // Expand
 
 impl<'t> Expand for Literal<'t> {
-    fn expand(&self, _values: &Values, f: &mut Formatter<'_>) -> fmt::Result {
-        f.encode(self.value, &satisfy::unreserved_or_reserved())
+    fn expand(&self, _values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
+        write.encode(self.value, &satisfy::unreserved_or_reserved())?;
+
+        Ok(())
     }
 }

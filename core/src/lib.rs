@@ -37,7 +37,7 @@ pub use crate::{
         },
     },
     process::{
-        expand::Expansion,
+        expand::ExpandError,
         parse::ParseError,
     },
 };

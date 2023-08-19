@@ -13,7 +13,7 @@ let values = Values::default()
     .add("library", Value::list(["uri", "template", "system"]));
 
 assert_eq!(
-    template.expand(&values).to_string(),
+    template.expand(&values).unwrap(),
     "/hello/world/from/uri/template/system"
 );
 ```
