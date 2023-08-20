@@ -17,7 +17,7 @@ indexmap = { version = "2", features = ["serde"] }
 iri-string = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-uri-template-system-core = { path = "../core" }
+uri-template-system-core = { path = "../core", version = "0.1.2" }
 uritemplate-next = "0.2"
 
 [dev-dependencies]

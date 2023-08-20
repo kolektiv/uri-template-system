@@ -11,4 +11,4 @@ readme = "README.md"
 version.workspace = true
 
 [dependencies]
-uri-template-system-core = { path = "../core", version = "0.1" }
+uri-template-system-core = { path = "../core", version = "0.1.2" }
