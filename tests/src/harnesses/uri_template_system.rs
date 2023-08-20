@@ -12,11 +12,13 @@ impl super::Harness for Harness {
     type Values = Values;
 
     fn prepare(&self, variables: Vec<(String, Variable)>) -> Self::Values {
-        Values::from_iter(variables.into_iter().map(|(n, v)| match v {
-            Variable::AssociativeArray(v) => (n, Value::AssociativeArray(v)),
-            Variable::Item(v) => (n, Value::Item(v)),
-            Variable::List(v) => (n, Value::List(v)),
-        }))
+        variables
+            .into_iter()
+            .fold(Values::default(), |values, (n, v)| match v {
+                Variable::AssociativeArray(v) => values.add(n, Value::AssociativeArray(v)),
+                Variable::Item(v) => values.add(n, Value::Item(v)),
+                Variable::List(v) => values.add(n, Value::List(v)),
+            })
     }
 
     fn test(&self, template: &str, values: &Self::Values) -> String {
