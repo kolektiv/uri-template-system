@@ -65,7 +65,7 @@ pub enum Value {
 impl Value {
     /// Constructs a new `Value` from any iterator which produces pairs (tuples)
     /// where both items implement `Into<String>`. This may be a simple array or
-    /// vec, or a more complex type such as an IndexMap.
+    /// vec, or a more complex type such as an `IndexMap`.
     ///
     /// ```
     /// # use uri_template_system_core::Value;
