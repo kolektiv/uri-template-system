@@ -7,37 +7,69 @@
 #![deny(clippy::suspicious)]
 #![allow(clippy::missing_errors_doc)] // TODO: Remove
 
-mod model {
-    pub mod template;
-    pub mod value;
-}
+mod string;
+mod template;
+mod value;
 
-mod process {
-    pub mod expand;
-    pub mod parse;
-}
+use std::fmt::{
+    Error,
+    Write,
+};
 
-mod util {
-    pub mod encode;
-    pub mod satisfy;
-}
+use thiserror::Error;
 
 // =============================================================================
 // URI Template
 // =============================================================================
 
+// Traits
+
+trait Expand {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError>;
+}
+
+trait Parse<'t>
+where
+    Self: Sized,
+{
+    fn parse(raw: &'t str, global: usize) -> (usize, Self);
+}
+
+trait TryParse<'t>
+where
+    Self: Sized,
+{
+    fn try_parse(raw: &'t str, base: usize) -> Result<(usize, Self), ParseError>;
+}
+
+// -----------------------------------------------------------------------------
+
+// Errors
+
+#[derive(Debug, Error)]
+pub enum ExpandError {
+    #[error("formatting failed")]
+    Format(#[from] Error),
+}
+
+#[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("{message} at position: {position}. expected: {expected}.")]
+    UnexpectedInput {
+        position: usize,
+        message: String,
+        expected: String,
+    },
+}
+
+// -----------------------------------------------------------------------------
+
 // Re-Exports
 
 pub use crate::{
-    model::{
-        template::Template,
-        value::{
-            Value,
-            Values,
-        },
-    },
-    process::{
-        expand::ExpandError,
-        parse::ParseError,
+    template::Template,
+    value::{
+        Value,
+        Values,
     },
 };

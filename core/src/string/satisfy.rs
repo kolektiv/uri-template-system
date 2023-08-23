@@ -1,32 +1,13 @@
-pub mod ascii;
-pub mod percent_encoded;
-pub mod tuple;
-pub mod unicode;
+pub mod tuple_2;
+pub mod tuple_3;
 
-use crate::util::satisfy::{
-    ascii::Ascii,
-    percent_encoded::PercentEncoded,
-};
+use crate::string::Satisfy;
 
 // =============================================================================
 // Satisfy
 // =============================================================================
 
-// Traits
-
-pub trait Satisfy {
-    fn satisfy(&self, input: &str) -> usize;
-}
-
-impl Satisfy for Box<dyn Satisfy> {
-    fn satisfy(&self, input: &str) -> usize {
-        self.as_ref().satisfy(input)
-    }
-}
-
-// -----------------------------------------------------------------------------
-
-// Standards
+// Common
 
 pub fn unreserved() -> impl Satisfy {
     Ascii::new(is_unreserved_ascii)
@@ -92,5 +73,91 @@ const fn is_sub_delimiter_ascii(b: u8) -> bool {
         | b'\x3b'           // ;
         | b'\x3d' => true,  // =
         _ => false,
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Implementations
+
+impl Satisfy for Box<dyn Satisfy> {
+    fn satisfy(&self, input: &str) -> usize {
+        self.as_ref().satisfy(input)
+    }
+}
+
+pub struct Ascii<P>
+where
+    P: Fn(u8) -> bool,
+{
+    predicate: P,
+}
+
+impl<P> Ascii<P>
+where
+    P: Fn(u8) -> bool + 'static,
+{
+    pub const fn new(predicate: P) -> Self {
+        Self { predicate }
+    }
+}
+
+impl<P> Satisfy for Ascii<P>
+where
+    P: Fn(u8) -> bool,
+{
+    fn satisfy(&self, input: &str) -> usize {
+        input
+            .bytes()
+            .position(|b| !b.is_ascii() || !(self.predicate)(b))
+            .unwrap_or(input.len())
+    }
+}
+
+pub struct PercentEncoded;
+
+impl Satisfy for PercentEncoded {
+    fn satisfy(&self, input: &str) -> usize {
+        let mut pos = 0;
+
+        loop {
+            match input[pos..].as_bytes() {
+                [b'%', a, b, ..] if a.is_ascii_hexdigit() && b.is_ascii_hexdigit() => pos += 3,
+                _ => break,
+            }
+        }
+
+        pos
+    }
+}
+
+pub struct Unicode<P>
+where
+    P: Fn(char) -> bool,
+{
+    predicate: P,
+}
+
+impl<P> Unicode<P>
+where
+    P: Fn(char) -> bool + 'static,
+{
+    pub const fn new(predicate: P) -> Self {
+        Self { predicate }
+    }
+}
+
+impl<P> Satisfy for Unicode<P>
+where
+    P: Fn(char) -> bool,
+{
+    fn satisfy(&self, input: &str) -> usize {
+        input
+            .chars()
+            .position(|c| c.is_ascii() || !(self.predicate)(c))
+            .map_or_else(
+                || input.len(),
+                |p| (p..p + 4).find(|p| input.is_char_boundary(*p)).unwrap(),
+            )
     }
 }

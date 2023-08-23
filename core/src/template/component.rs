@@ -4,21 +4,15 @@ mod literal;
 use std::fmt::Write;
 
 use crate::{
-    model::template::component::{
+    template::component::{
         expression::Expression,
         literal::Literal,
     },
-    process::{
-        expand::{
-            Expand,
-            ExpandError,
-        },
-        parse::{
-            ParseError,
-            TryParse,
-        },
-    },
-    Values,
+    value::Values,
+    Expand,
+    ExpandError,
+    ParseError,
+    TryParse,
 };
 
 // =============================================================================

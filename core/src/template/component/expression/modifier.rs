@@ -1,4 +1,4 @@
-use crate::process::parse::{
+use crate::{
     ParseError,
     TryParse,
 };

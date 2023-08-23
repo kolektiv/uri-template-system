@@ -1,9 +1,9 @@
 use crate::{
-    model::template::component::expression::{
+    template::component::expression::{
         Allow,
         Behaviour,
     },
-    process::parse::Parse,
+    Parse,
 };
 
 // =============================================================================

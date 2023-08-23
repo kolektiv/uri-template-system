@@ -1,27 +1,21 @@
 use std::fmt::Write;
 
 use crate::{
-    model::value::Values,
-    process::{
-        expand::{
-            Expand,
-            ExpandError,
-        },
-        parse::{
-            ParseError,
-            TryParse,
-        },
-    },
-    util::{
-        encode::Encode,
+    string::{
         satisfy::{
             self,
-            ascii::Ascii,
-            percent_encoded::PercentEncoded,
-            unicode::Unicode,
-            Satisfy,
+            Ascii,
+            PercentEncoded,
+            Unicode,
         },
+        Encode,
+        Satisfy,
     },
+    value::Values,
+    Expand,
+    ExpandError,
+    ParseError,
+    TryParse,
 };
 
 // =============================================================================

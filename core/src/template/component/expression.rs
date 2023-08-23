@@ -5,35 +5,25 @@ mod variable;
 use std::fmt::Write;
 
 use crate::{
-    model::{
-        template::component::expression::{
-            modifier::Modifier,
-            operator::Operator,
-            variable::VariableList,
-        },
-        value::{
-            Value,
-            Values,
-        },
+    string::{
+        satisfy,
+        Encode,
+        Satisfy,
     },
-    process::{
-        expand::{
-            Expand,
-            ExpandError,
-        },
-        parse::{
-            Parse,
-            ParseError,
-            TryParse,
-        },
+    template::component::expression::{
+        modifier::Modifier,
+        operator::Operator,
+        variable::VariableList,
     },
-    util::{
-        encode::Encode,
-        satisfy::{
-            self,
-            Satisfy,
-        },
+    value::{
+        Value,
+        Values,
     },
+    Expand,
+    ExpandError,
+    Parse,
+    ParseError,
+    TryParse,
 };
 
 // =============================================================================

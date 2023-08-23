@@ -3,20 +3,12 @@ mod component;
 use std::fmt::Write;
 
 use crate::{
-    model::{
-        template::component::Component,
-        value::Values,
-    },
-    process::{
-        expand::{
-            Expand,
-            ExpandError,
-        },
-        parse::{
-            ParseError,
-            TryParse,
-        },
-    },
+    template::component::Component,
+    value::Values,
+    Expand,
+    ExpandError,
+    ParseError,
+    TryParse,
 };
 
 // =============================================================================
