@@ -45,7 +45,7 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
                     output.extend(
                         input
                             .iter()
-                            .map(|template| harness.test(&template, &values)),
+                            .map(|template| harness.test(template, &values)),
                     );
                 },
                 BatchSize::SmallInput,
@@ -61,7 +61,7 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
                     output.extend(
                         input
                             .iter()
-                            .map(|template| harness.test(&template, &group.variables)),
+                            .map(|template| harness.test(template, &group.variables)),
                     );
                 },
                 BatchSize::SmallInput,
@@ -78,7 +78,7 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
                     output.extend(
                         input
                             .iter()
-                            .map(|template| harness.test(&template, &context)),
+                            .map(|template| harness.test(template, &context)),
                     );
                 },
                 BatchSize::SmallInput,

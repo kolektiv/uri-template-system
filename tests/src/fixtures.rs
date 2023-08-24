@@ -7,14 +7,17 @@ use serde::Deserialize;
 // Fixtures
 // =============================================================================
 
+#[must_use]
 pub fn examples() -> Vec<Group> {
     data().0.clone()
 }
 
+#[must_use]
 pub fn examples_by_section() -> Vec<Group> {
     data().1.clone()
 }
 
+#[must_use]
 pub fn extended_tests() -> Vec<Group> {
     data().2.clone()
 }
