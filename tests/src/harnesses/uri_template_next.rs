@@ -22,6 +22,7 @@ impl harnesses::Harness for Harness {
                     Variable::AssociativeArray(v) => template.set(n, &v[..]),
                     Variable::Item(v) => template.set(n, v.as_str()),
                     Variable::List(v) => template.set(n, &v[..]),
+                    Variable::Undefined => &mut template,
                 };
 
                 template

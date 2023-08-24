@@ -71,6 +71,10 @@ pub enum Value {
     /// requirements for Level 4 templates defined in
     /// [RFC6570 2.3](https://datatracker.ietf.org/doc/html/rfc6570#section-2.3).
     List(Vec<String>),
+    /// The [`Value::Undefined`] variant allows for input data to be explicitly
+    /// given as undefined. This is sometimes useful rather than simply omitting
+    /// the data.
+    Undefined,
 }
 
 impl Value {
@@ -156,6 +160,7 @@ impl Value {
         match self {
             Self::AssociativeArray(value) if value.is_empty() => false,
             Self::List(value) if value.is_empty() => false,
+            Self::Undefined => false,
             _ => true,
         }
     }

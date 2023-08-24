@@ -27,6 +27,7 @@ impl harnesses::Harness for Harness {
                     Variable::AssociativeArray(v) => context.insert(n, Value::Assoc(v)),
                     Variable::Item(v) => context.insert(n, Value::String(v)),
                     Variable::List(v) => context.insert(n, Value::List(v)),
+                    Variable::Undefined => context.insert(n, Value::Undefined),
                 };
 
                 context

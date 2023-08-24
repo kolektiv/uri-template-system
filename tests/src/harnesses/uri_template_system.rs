@@ -18,6 +18,7 @@ impl super::Harness for Harness {
                 Variable::AssociativeArray(v) => values.add(n, Value::AssociativeArray(v)),
                 Variable::Item(v) => values.add(n, Value::Item(v)),
                 Variable::List(v) => values.add(n, Value::List(v)),
+                Variable::Undefined => values.add(n, Value::Undefined),
             })
     }
 

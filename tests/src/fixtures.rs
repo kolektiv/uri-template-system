@@ -44,6 +44,7 @@ pub enum Variable {
     AssociativeArray(Vec<(String, String)>),
     Item(String),
     List(Vec<String>),
+    Undefined,
 }
 
 #[derive(Clone, Debug)]
@@ -110,7 +111,7 @@ fn load(fixtures_json: &str) -> Vec<Group> {
                     JSONVariable::Item(value) => Some((name, Variable::Item(value))),
                     JSONVariable::List(value) => Some((name, Variable::List(value))),
                     JSONVariable::Number(value) => Some((name, Variable::Item(value.to_string()))),
-                    JSONVariable::Undefined => None,
+                    JSONVariable::Undefined => Some((name, Variable::Undefined)),
                 })
                 .collect(),
             cases: cases
