@@ -1,6 +1,6 @@
-mod modifier;
-mod operator;
-mod variable;
+pub mod modifier;
+pub mod operator;
+pub mod variable;
 
 use std::fmt::Write;
 
@@ -10,20 +10,22 @@ use crate::{
         Encode,
         Satisfy,
     },
-    template::component::expression::{
-        modifier::Modifier,
-        operator::Operator,
-        variable::VariableList,
+    template::{
+        component::expression::{
+            modifier::Modifier,
+            operator::Operator,
+            variable::VariableList,
+        },
+        Expand,
+        ExpandError,
+        Parse,
+        ParseError,
+        TryParse,
     },
     value::{
         Value,
         Values,
     },
-    Expand,
-    ExpandError,
-    Parse,
-    ParseError,
-    TryParse,
 };
 
 // =============================================================================
@@ -139,7 +141,7 @@ impl<'t> Expand for Expression<'t> {
             .as_ref()
             .map_or(&operator::DEFAULT_BEHAVIOUR, Operator::behaviour);
 
-        let matcher = behaviour.allow.matcher();
+        let satisfier = behaviour.allow.satisfier();
         let mut first = true;
 
         for (var_name, modifier) in &self.variable_list {
@@ -201,13 +203,13 @@ impl<'t> Expand for Expression<'t> {
 
                         let pos: usize = value.chars().take(*length).map(char::len_utf8).sum();
 
-                        write.encode(&value[..pos], &matcher)?;
+                        write.encode(&value[..pos], &satisfier)?;
                     }
                     _ => {
                         // * otherwise, append the value to the result string after pct-encoding any
                         //   characters that are not in the allow set.
 
-                        write.encode(value, &matcher)?;
+                        write.encode(value, &satisfier)?;
                     }
                 };
             } else if let Some(Modifier::Explode) = modifier {
@@ -246,7 +248,7 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             } else {
                                 write.write_char('=')?;
-                                write.encode(value, &matcher)?;
+                                write.encode(value, &satisfier)?;
                             }
                         }
                     } else if let Value::List(value) = value {
@@ -278,7 +280,7 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             } else {
                                 write.write_char('=')?;
-                                write.encode(value, &matcher)?;
+                                write.encode(value, &satisfier)?;
                             }
                         }
                     }
@@ -302,9 +304,9 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             }
 
-                            write.encode(name, &matcher)?;
+                            write.encode(name, &satisfier)?;
                             write.write_char('=')?;
-                            write.encode(value, &matcher)?;
+                            write.encode(value, &satisfier)?;
                         }
                     } else if let Value::List(value) = value {
                         // + if this is a list, append each defined list member to the result
@@ -323,7 +325,7 @@ impl<'t> Expand for Expression<'t> {
                                 }
                             }
 
-                            write.encode(value, &matcher)?;
+                            write.encode(value, &satisfier)?;
                         }
                     }
                 }
@@ -363,9 +365,9 @@ impl<'t> Expand for Expression<'t> {
                                 write.write_char(',')?;
                             }
 
-                            write.encode(name, &matcher)?;
+                            write.encode(name, &satisfier)?;
                             write.write_char(',')?;
-                            write.encode(value, &matcher)?;
+                            write.encode(value, &satisfier)?;
                         }
                     }
                 } else if let Value::List(value) = value {
@@ -384,7 +386,7 @@ impl<'t> Expand for Expression<'t> {
                                 write.write_char(',')?;
                             }
 
-                            write.encode(value, &matcher)?;
+                            write.encode(value, &satisfier)?;
                         }
                     }
                 }
@@ -411,7 +413,7 @@ pub enum Allow {
 }
 
 impl Allow {
-    pub fn matcher(&self) -> Box<dyn Satisfy> {
+    pub fn satisfier(&self) -> Box<dyn Satisfy> {
         match self {
             Self::U => Box::new(satisfy::unreserved()),
             Self::UR => Box::new(satisfy::unreserved_or_reserved()),

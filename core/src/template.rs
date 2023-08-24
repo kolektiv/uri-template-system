@@ -1,23 +1,83 @@
-mod component;
+pub mod component;
 
-use std::fmt::Write;
+use std::fmt::{
+    Error,
+    Write,
+};
+
+use thiserror::Error;
 
 use crate::{
     template::component::Component,
     value::Values,
-    Expand,
-    ExpandError,
-    ParseError,
-    TryParse,
 };
 
 // =============================================================================
 // Template
 // =============================================================================
 
+// Traits
+
+trait Expand {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError>;
+}
+
+trait Parse<'t>
+where
+    Self: Sized,
+{
+    fn parse(raw: &'t str, global: usize) -> (usize, Self);
+}
+
+trait TryParse<'t>
+where
+    Self: Sized,
+{
+    fn try_parse(raw: &'t str, base: usize) -> Result<(usize, Self), ParseError>;
+}
+
+// -----------------------------------------------------------------------------
+
+// Errors
+
+/// An [`Error`](std::error::Error) compatible type which may be the result of a
+/// failure of [`Template::expand`] (given a valid [`Template`] and provided
+/// [`Values`]).
+#[derive(Debug, Error)]
+pub enum ExpandError {
+    /// Formatting for this expansion failed due to an internal error in
+    /// [`std::fmt::Write`], which is not recoverable.
+    #[error("formatting failed")]
+    Format(#[from] Error),
+}
+
+/// An [`Error`](std::error::Error) compatible type which may be the result of a
+/// failure of [`Template::parse`], likely due to an invalid URI Template format
+/// (as defined by the grammar given in [RFC6570](https://datatracker.ietf.org/doc/html/rfc6570)).
+#[derive(Debug, Error)]
+pub enum ParseError {
+    /// The input given contained an unexpected value according to the URI
+    /// Template value grammar, causing parsing to fail. See the grammar at
+    /// [RFC6570](https://datatracker.ietf.org/doc/html/rfc6570) for the definition of a
+    /// valid URI Template.
+    #[error("{message} at position: {position}. expected: {expected}.")]
+    UnexpectedInput {
+        /// The position (in bytes) of the input at which the unexpected input
+        /// occurs.
+        position: usize,
+        /// A message giving more detail about which grammatical element failed
+        /// to parse the given input.
+        message: String,
+        /// An indication of what (valid) input was expected by the parser.
+        expected: String,
+    },
+}
+
+// -----------------------------------------------------------------------------
+
 // Types
 
-/// The `Template` type is the basis for most simple tasks. Parsing and
+/// The [`Template`] type is the basis for most simple tasks. Parsing and
 /// expansion are both template functions.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Template<'t> {
@@ -25,8 +85,14 @@ pub struct Template<'t> {
 }
 
 impl<'t> Template<'t> {
-    /// Expands the template using the given `Values`, returning a string if
-    /// expansion was successful.
+    /// Expands the template using the given [`Values`], returning a [`String`]
+    /// if expansion was successful.
+    ///
+    /// # Errors
+    ///
+    /// This function may fail due to internal formatting errors
+    /// ([`std::fmt::Write`] is an abstraction which allows for underlying
+    /// failures) though this is very unlikely given [`String`] output.
     ///
     /// ```
     /// # use uri_template_system_core::{ Template, Values, Value };
@@ -43,10 +109,16 @@ impl<'t> Template<'t> {
         Ok(expanded)
     }
 
-    /// Parses a string representing a potential template, and returns a new
-    /// `Template` instance if valid. See <https://datatracker.ietf.org/doc/html/rfc6570>
+    /// Parses a [`&str`] representing a potential template, and returns a new
+    /// [`Template`] instance if valid. See [RFC6570](https://datatracker.ietf.org/doc/html/rfc6570)
     /// for the grammar of a valid URI Template. `uri-template-system` supports
     /// all operators and modifiers up-to and including Level 4.
+    ///
+    /// # Errors
+    ///
+    /// This function may fail when the given input is not a valid URI Template
+    /// according the RFC-defined grammar. The resultant [`ParseError`]
+    /// should give useful information about where the parser failed.
     ///
     /// ```
     /// # use uri_template_system_core::Template;

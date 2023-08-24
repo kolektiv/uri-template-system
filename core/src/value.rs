@@ -8,8 +8,8 @@ use fnv::FnvBuildHasher;
 
 // Types
 
-/// The `Values` type is used as the source of content during template
-/// expansion, and is a logical map of keys to typed values (which may or may
+/// The [Values] type is used as the source of content during template
+/// expansion, and is a logical map of keys to typed [Value] (which may or may
 /// not be present during expansion).
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Values {
@@ -17,14 +17,14 @@ pub struct Values {
 }
 
 impl Values {
-    /// Adds a new `Value` to the `Values` collection and returns the modified
+    /// Adds a new [Value] to the [Values] collection and returns the modified
     /// collection to allow for chaining of calls during construction. Values
     /// may be any type which implements `Into<Value>` - this will generally be
-    /// a concrete `Value` but may be your own type for which this trait has
+    /// a concrete [Value] but may be your own type for which this trait has
     /// been implemented.
     ///
     /// For clarity, it may be better to implement a suitable iterator trait for
-    /// your custom type and pass it to the relevant `Value` construction
+    /// your custom type and pass it to the relevant [Value] construction
     /// function, as this will make the shape of data produced more obvious for
     /// anyone reading the code.
     #[must_use]
@@ -33,7 +33,7 @@ impl Values {
         self
     }
 
-    /// Gets the value at the given key from the `Values` collection if it
+    /// Gets the [Value] at the given key from the [Values] collection if it
     /// exists.
     #[must_use]
     pub fn get(&self, key: &str) -> Option<&Value> {
@@ -49,21 +49,32 @@ impl FromIterator<(String, Value)> for Values {
     }
 }
 
-/// The `Value` type is used as the source of content during template expansion,
-/// as part of a `Values` collection. It maps to the three valid shapes of data
-/// defined by the RFC (a single item, a list of items, or a list of key/value
-/// pairs).
+/// The [Value] type is used as the source of content during template expansion,
+/// as part of a [Values] collection. It maps to the three valid shapes of data
+/// defined by the [RFC](https://datatracker.ietf.org/doc/html/rfc6570) (a single item,
+/// a list of items, or a list of key/value pairs).
 ///
-/// All values are `String`s for simplicity of ownership, etc.
+/// All values are of type [String] for simplicity of ownership, etc.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Value {
+    /// The [`Value::AssociativeArray`] variant allows for input data to be
+    /// treated as a logical map (with implicit ordering), complying with the
+    /// requirements for Level 4 templates defined in
+    /// [RFC6570 2.3](https://datatracker.ietf.org/doc/html/rfc6570#section-2.3).
     AssociativeArray(Vec<(String, String)>),
+    /// The [`Value::Item`] variant allows for simple input data, complying with
+    /// the requirements for sub-Level 4 templates defined in
+    /// [RFC6570 2.3](https://datatracker.ietf.org/doc/html/rfc6570#section-2.3).
     Item(String),
+    /// The [`Value::List`] variant allows for input data to be
+    /// treated as a logical list (with implicit ordering), complying with the
+    /// requirements for Level 4 templates defined in
+    /// [RFC6570 2.3](https://datatracker.ietf.org/doc/html/rfc6570#section-2.3).
     List(Vec<String>),
 }
 
 impl Value {
-    /// Constructs a new `Value` from any iterator which produces pairs (tuples)
+    /// Constructs a new [Value] from any iterator which produces pairs (tuples)
     /// where both items implement `Into<String>`. This may be a simple array or
     /// vec, or a more complex type such as an `IndexMap`.
     ///
@@ -95,7 +106,27 @@ impl Value {
         )
     }
 
-    /// Constructs a new `Value` from any iterator which produces items which
+    /// Constructs a new [Value] from any type which implements `Into<String>`.
+    ///
+    /// ```
+    /// # use uri_template_system_core::Value;
+    /// #
+    /// let expected = Value::Item(String::from("a"));
+    ///
+    /// let str = "a";
+    /// assert_eq!(expected, Value::item(str));
+    ///
+    /// let string = String::from(str);
+    /// assert_eq!(expected, Value::item(string));
+    /// ```
+    pub fn item<T>(value: T) -> Self
+    where
+        T: Into<String>,
+    {
+        Self::Item(value.into())
+    }
+
+    /// Constructs a new [Value] from any iterator which produces items which
     /// implement `Into<String>`, such as arrays, vecs, etc.
     ///
     /// ```
@@ -108,26 +139,6 @@ impl Value {
     ///
     /// let vec = Vec::from_iter(array);
     /// assert_eq!(expected, Value::list(vec));
-    /// ```
-    pub fn item<T>(value: T) -> Self
-    where
-        T: Into<String>,
-    {
-        Self::Item(value.into())
-    }
-
-    /// Constructs a new `Value` from any type which implements `Into<String>`.
-    ///
-    /// ```
-    /// # use uri_template_system_core::Value;
-    /// #
-    /// let expected = Value::Item(String::from("a"));
-    ///
-    /// let str = "a";
-    /// assert_eq!(expected, Value::item(str));
-    ///
-    /// let string = String::from(str);
-    /// assert_eq!(expected, Value::item(string));
     /// ```
     pub fn list<T, U>(value: T) -> Self
     where

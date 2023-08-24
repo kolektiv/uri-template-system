@@ -1,4 +1,4 @@
-use crate::{
+use crate::template::{
     ParseError,
     TryParse,
 };

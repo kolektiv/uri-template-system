@@ -1,18 +1,20 @@
-mod expression;
-mod literal;
+pub mod expression;
+pub mod literal;
 
 use std::fmt::Write;
 
 use crate::{
-    template::component::{
-        expression::Expression,
-        literal::Literal,
+    template::{
+        component::{
+            expression::Expression,
+            literal::Literal,
+        },
+        Expand,
+        ExpandError,
+        ParseError,
+        TryParse,
     },
     value::Values,
-    Expand,
-    ExpandError,
-    ParseError,
-    TryParse,
 };
 
 // =============================================================================

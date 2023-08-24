@@ -6,9 +6,11 @@ use crate::{
         },
         Satisfy,
     },
-    template::component::expression::modifier::Modifier,
-    ParseError,
-    TryParse,
+    template::{
+        component::expression::modifier::Modifier,
+        ParseError,
+        TryParse,
+    },
 };
 
 // =============================================================================

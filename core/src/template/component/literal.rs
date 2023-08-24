@@ -11,11 +11,13 @@ use crate::{
         Encode,
         Satisfy,
     },
+    template::{
+        Expand,
+        ExpandError,
+        ParseError,
+        TryParse,
+    },
     value::Values,
-    Expand,
-    ExpandError,
-    ParseError,
-    TryParse,
 };
 
 // =============================================================================

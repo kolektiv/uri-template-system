@@ -1,5 +1,5 @@
-use crate::{
-    template::component::expression::{
+use crate::template::{
+    component::expression::{
         Allow,
         Behaviour,
     },
