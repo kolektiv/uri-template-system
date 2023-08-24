@@ -1,3 +1,8 @@
+# Environment
+
+data_home := env_var_or_default("XDG_DATA_HOME", "~/.data")
+test_features := env_var_or_default("TEST", "default")
+
 # Cargo (Project)
 
 project_name := file_name(justfile_directory())
@@ -8,16 +13,16 @@ doc *args:
 
 test *args:
     #!/usr/bin/env bash
-    cargo test {{args}}
+    cargo test --features {{test_features}} {{args}}
 
 # Criterion (Benches)
 
-criterion_home_root := "~/.data/criterion"
-criterion_home := criterion_home_root/project_name
+criterion_root := data_home/"criterion"
+criterion_home := criterion_root/project_name
 
 bench name *args:
     #!/usr/bin/env bash
-    CRITERION_HOME={{criterion_home/name}} cargo bench -p uri-template-system-tests --features $COMPARE --bench {{name}} -- --verbose {{args}}
+    CRITERION_HOME={{criterion_home/name}} cargo bench -p uri-template-system-tests --features {{test_features}} --bench {{name}} -- --verbose {{args}}
 
 # Release
 
