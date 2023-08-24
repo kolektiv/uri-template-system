@@ -2,12 +2,13 @@
 name = "uri-template-system"
 authors.workspace = true
 categories.workspace = true
-description = "URI Template (RFC 6570) parsing, expansion and matching"
+description = "URI Template (RFC 6570) Parsing, Expansion and Matching"
 documentation.workspace = true
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 readme = "README.md"
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
