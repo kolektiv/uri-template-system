@@ -12,14 +12,17 @@ readme = "README.md"
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+iri-string = ["dep:iri-string"]
+uritemplate-next = ["dep:uritemplate-next"]
 
 [dependencies]
 indexmap = { version = "2", features = ["serde"] }
-iri-string = "0.7"
+iri-string = { version = "0.7", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 uri-template-system-core = { path = "../core", version = "0.1.4" }
-uritemplate-next = "0.2"
+uritemplate-next = { version = "0.2", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"

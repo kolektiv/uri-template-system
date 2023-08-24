@@ -1,4 +1,6 @@
+#[cfg(feature = "iri-string")]
 pub mod iri_string;
+#[cfg(feature = "uritemplate-next")]
 pub mod uri_template_next;
 pub mod uri_template_system;
 

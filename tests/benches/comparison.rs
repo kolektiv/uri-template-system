@@ -12,9 +12,7 @@ use uri_template_system_tests::{
         Group,
     },
     harnesses::{
-        iri_string,
-        uri_template_next,
-        uri_template_system,
+        self,
         Harness,
     },
 };
@@ -36,54 +34,56 @@ fn bench_set(c: &mut Criterion, name: &str, groups: Vec<Group>) {
 
     for group in groups {
         g.bench_function(BenchmarkId::new(&group.name, "URI Template System"), |b| {
-            let harness = uri_template_system::Harness;
+            let harness = harnesses::uri_template_system::Harness;
             let values = harness.prepare(group.variables.clone());
 
             b.iter_batched_ref(
                 || setup(&group.cases),
                 |(input, output): &mut (Vec<String>, Vec<String>)| {
-                    output.extend(
-                        input
-                            .iter()
-                            .map(|template| harness.test(template, &values)),
-                    );
+                    output.extend(input.iter().map(|template| harness.test(template, &values)));
                 },
                 BatchSize::SmallInput,
             )
         });
 
-        g.bench_function(BenchmarkId::new(&group.name, "URITemplate Next"), |b| {
-            let harness = uri_template_next::Harness;
+        #[cfg(feature = "uritemplate-next")]
+        {
+            g.bench_function(BenchmarkId::new(&group.name, "URITemplate Next"), |b| {
+                let harness = harnesses::uri_template_next::Harness;
 
-            b.iter_batched_ref(
-                || setup(&group.cases),
-                |(input, output): &mut (Vec<String>, Vec<String>)| {
-                    output.extend(
-                        input
-                            .iter()
-                            .map(|template| harness.test(template, &group.variables)),
-                    );
-                },
-                BatchSize::SmallInput,
-            )
-        });
+                b.iter_batched_ref(
+                    || setup(&group.cases),
+                    |(input, output): &mut (Vec<String>, Vec<String>)| {
+                        output.extend(
+                            input
+                                .iter()
+                                .map(|template| harness.test(template, &group.variables)),
+                        );
+                    },
+                    BatchSize::SmallInput,
+                )
+            });
+        }
 
-        g.bench_function(BenchmarkId::new(&group.name, "IRI String"), |b| {
-            let harness = iri_string::Harness;
-            let context = harness.prepare(group.variables.clone());
+        #[cfg(feature = "iri-string")]
+        {
+            g.bench_function(BenchmarkId::new(&group.name, "IRI String"), |b| {
+                let harness = harnesses::iri_string::Harness;
+                let context = harness.prepare(group.variables.clone());
 
-            b.iter_batched_ref(
-                || setup(&group.cases),
-                |(input, output): &mut (Vec<String>, Vec<String>)| {
-                    output.extend(
-                        input
-                            .iter()
-                            .map(|template| harness.test(template, &context)),
-                    );
-                },
-                BatchSize::SmallInput,
-            )
-        });
+                b.iter_batched_ref(
+                    || setup(&group.cases),
+                    |(input, output): &mut (Vec<String>, Vec<String>)| {
+                        output.extend(
+                            input
+                                .iter()
+                                .map(|template| harness.test(template, &context)),
+                        );
+                    },
+                    BatchSize::SmallInput,
+                )
+            });
+        }
     }
 
     g.finish();

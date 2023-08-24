@@ -25,13 +25,13 @@ fn uri_template_system() {
     test_sets(harnesses::uri_template_system::Harness);
 }
 
-#[ignore]
+#[cfg(feature = "uritemplate-next")]
 #[test]
 fn uri_template_next() {
     test_sets(harnesses::uri_template_next::Harness);
 }
 
-#[ignore]
+#[cfg(feature = "iri-string")]
 #[test]
 fn iri_string() {
     test_sets(harnesses::iri_string::Harness);
