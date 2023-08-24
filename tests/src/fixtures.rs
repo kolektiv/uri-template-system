@@ -106,12 +106,12 @@ fn load(fixtures_json: &str) -> Vec<Group> {
             variables: cases
                 .variables
                 .into_iter()
-                .filter_map(|(name, variable)| match variable {
-                    JSONVariable::AssociativeArray(value) => Some((name, Variable::AssociativeArray(value.into_iter().collect()))),
-                    JSONVariable::Item(value) => Some((name, Variable::Item(value))),
-                    JSONVariable::List(value) => Some((name, Variable::List(value))),
-                    JSONVariable::Number(value) => Some((name, Variable::Item(value.to_string()))),
-                    JSONVariable::Undefined => Some((name, Variable::Undefined)),
+                .map(|(name, variable)| match variable {
+                    JSONVariable::AssociativeArray(value) => (name, Variable::AssociativeArray(value.into_iter().collect())),
+                    JSONVariable::Item(value) => (name, Variable::Item(value)),
+                    JSONVariable::List(value) =>(name, Variable::List(value)),
+                    JSONVariable::Number(value) => (name, Variable::Item(value.to_string())),
+                    JSONVariable::Undefined => (name, Variable::Undefined),
                 })
                 .collect(),
             cases: cases
