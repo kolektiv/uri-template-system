@@ -71,9 +71,9 @@ pub enum ParseError {
     },
 }
 
-// -----------------------------------------------------------------------------
-
-// Implementations
+// =============================================================================
+// Parse - Implementations
+// =============================================================================
 
 // Template
 
@@ -83,6 +83,8 @@ impl<'t> TryParse<'t> for Template<'t> {
             .map(|(position, components)| (position, Self::new(components)))
     }
 }
+
+// -----------------------------------------------------------------------------
 
 // Component
 
@@ -123,6 +125,8 @@ impl<'t> TryParse<'t> for Vec<Component<'t>> {
 struct ComponentState {
     position: usize,
 }
+
+// -----------------------------------------------------------------------------
 
 // Expression
 
@@ -199,6 +203,8 @@ enum ExpressionNext {
     VariableList,
     ClosingBrace,
 }
+
+// -----------------------------------------------------------------------------
 
 // Variables
 
@@ -319,6 +325,10 @@ const fn is_variable_character_ascii(b: u8) -> bool {
     }
 }
 
+// -----------------------------------------------------------------------------
+
+// Operator
+
 impl<'t> Parse<'t> for Option<Operator> {
     fn parse(raw: &'t str, _global: usize) -> (usize, Self) {
         raw.chars()
@@ -340,6 +350,8 @@ impl<'t> Parse<'t> for Option<Operator> {
             .unwrap_or((0, None))
     }
 }
+
+// -----------------------------------------------------------------------------
 
 // Modifier
 
@@ -429,6 +441,8 @@ const fn is_non_zero_digit(c: char) -> bool {
         _ => false,
     }
 }
+
+// -----------------------------------------------------------------------------
 
 // Literal
 
