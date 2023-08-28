@@ -1,81 +1,23 @@
-pub mod component;
-
-use std::fmt::{
-    Error,
-    Write,
-};
-
-use thiserror::Error;
+pub mod expand;
+pub mod parse;
 
 use crate::{
-    template::component::Component,
+    template::{
+        expand::{
+            Expand,
+            ExpandError,
+        },
+        parse::{
+            ParseError,
+            TryParse,
+        },
+    },
     value::Values,
 };
 
 // =============================================================================
 // Template
 // =============================================================================
-
-// Traits
-
-trait Expand {
-    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError>;
-}
-
-trait Parse<'t>
-where
-    Self: Sized,
-{
-    fn parse(raw: &'t str, global: usize) -> (usize, Self);
-}
-
-trait TryParse<'t>
-where
-    Self: Sized,
-{
-    fn try_parse(raw: &'t str, base: usize) -> Result<(usize, Self), ParseError>;
-}
-
-// -----------------------------------------------------------------------------
-
-// Errors
-
-/// An [`Error`](std::error::Error) compatible type which may be the result of a
-/// failure of [`Template::expand`] (given a valid [`Template`] and provided
-/// [`Values`]).
-#[derive(Debug, Error)]
-pub enum ExpandError {
-    /// Formatting for this expansion failed due to an internal error in
-    /// [`std::fmt::Write`], which is not recoverable.
-    #[error("formatting failed")]
-    Format(#[from] Error),
-}
-
-/// An [`Error`](std::error::Error) compatible type which may be the result of a
-/// failure of [`Template::parse`], likely due to an invalid URI Template format
-/// (as defined by the grammar given in [RFC6570](https://datatracker.ietf.org/doc/html/rfc6570)).
-#[derive(Debug, Error)]
-pub enum ParseError {
-    /// The input given contained an unexpected value according to the URI
-    /// Template value grammar, causing parsing to fail. See the grammar at
-    /// [RFC6570](https://datatracker.ietf.org/doc/html/rfc6570) for the definition of a
-    /// valid URI Template.
-    #[error("{message} at position: {position}. expected: {expected}.")]
-    UnexpectedInput {
-        /// The position (in bytes) of the input at which the unexpected input
-        /// occurs.
-        position: usize,
-        /// A message giving more detail about which grammatical element failed
-        /// to parse the given input.
-        message: String,
-        /// An indication of what (valid) input was expected by the parser.
-        expected: String,
-    },
-}
-
-// -----------------------------------------------------------------------------
-
-// Types
 
 /// The [`Template`] type is the basis for most simple tasks. Parsing and
 /// expansion are both template functions.
@@ -138,23 +80,102 @@ impl<'t> Template<'t> {
 
 // -----------------------------------------------------------------------------
 
-// Parse
+// Component
 
-impl<'t> TryParse<'t> for Template<'t> {
-    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
-        Vec::<Component<'t>>::try_parse(raw, global)
-            .map(|(position, components)| (position, Self::new(components)))
+#[derive(Debug, Eq, PartialEq)]
+pub enum Component<'t> {
+    Literal(Literal<'t>),
+    Expression(Expression<'t>),
+}
+
+// -----------------------------------------------------------------------------
+
+// Expression
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Expression<'t> {
+    pub operator: Option<Operator>,
+    pub variable_list: VariableList<'t>,
+}
+
+impl<'t> Expression<'t> {
+    pub const fn new(operator: Option<Operator>, variable_list: VariableList<'t>) -> Self {
+        Self {
+            operator,
+            variable_list,
+        }
     }
 }
 
 // -----------------------------------------------------------------------------
 
-// Expand
+// Operator
 
-impl<'t> Expand for Template<'t> {
-    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
-        self.components
-            .iter()
-            .try_for_each(|component| component.expand(values, write))
+#[derive(Debug, Eq, PartialEq)]
+pub enum Operator {
+    Level2(OpLevel2),
+    Level3(OpLevel3),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum OpLevel2 {
+    Fragment,
+    Reserved,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum OpLevel3 {
+    Label,
+    Path,
+    PathParameter,
+    Query,
+    QueryContinuation,
+}
+
+// -----------------------------------------------------------------------------
+
+// Variables
+
+pub type VariableList<'t> = Vec<VariableSpecification<'t>>;
+
+pub type VariableSpecification<'t> = (VariableName<'t>, Option<Modifier>);
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct VariableName<'t> {
+    name: &'t str,
+}
+
+impl<'t> VariableName<'t> {
+    pub const fn new(name: &'t str) -> Self {
+        Self { name }
+    }
+
+    pub const fn name(&self) -> &str {
+        self.name
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Modifier
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Modifier {
+    Explode,
+    Prefix(usize),
+}
+
+// -----------------------------------------------------------------------------
+
+// Literal
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Literal<'t> {
+    pub value: &'t str,
+}
+
+impl<'t> Literal<'t> {
+    pub const fn new(value: &'t str) -> Self {
+        Self { value }
     }
 }

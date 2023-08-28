@@ -20,8 +20,8 @@ mod value;
 
 pub use self::{
     template::{
-        ExpandError,
-        ParseError,
+        expand::ExpandError,
+        parse::ParseError,
         Template,
     },
     value::{

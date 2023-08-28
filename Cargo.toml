@@ -1,5 +1,6 @@
 [workspace]
 members = ["core", "meta", "tests"]
+resolver = "2"
 
 [workspace.package]
 authors = ["Andrew Cherry (kolektiv)"]

@@ -3,16 +3,23 @@ use std::fmt::{
     Write,
 };
 
-use crate::string::{
-    Encode,
-    Satisfy,
-};
+use crate::string::satisfy::Satisfy;
 
 // =============================================================================
 // Encode
 // =============================================================================
 
-// Implementations
+// Traits
+
+pub trait Encode {
+    fn encode(&mut self, raw: &str, satisfier: &impl Satisfy) -> Result;
+}
+
+// =============================================================================
+// Encode - Implementations
+// =============================================================================
+
+// Write
 
 impl<T> Encode for T
 where

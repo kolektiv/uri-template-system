@@ -1,26 +1,27 @@
-pub mod modifier;
-pub mod operator;
-pub mod variable;
+use std::fmt::{
+    Error,
+    Write,
+};
 
-use std::fmt::Write;
+use thiserror::Error;
 
 use crate::{
     string::{
-        satisfy,
-        Encode,
-        Satisfy,
+        encode::Encode,
+        satisfy::{
+            self,
+            Satisfy,
+        },
     },
     template::{
-        component::expression::{
-            modifier::Modifier,
-            operator::Operator,
-            variable::VariableList,
-        },
-        Expand,
-        ExpandError,
-        Parse,
-        ParseError,
-        TryParse,
+        Component,
+        Expression,
+        Literal,
+        Modifier,
+        OpLevel2,
+        OpLevel3,
+        Operator,
+        Template,
     },
     value::{
         Value,
@@ -29,107 +30,62 @@ use crate::{
 };
 
 // =============================================================================
-// Expression
+// Expand
 // =============================================================================
 
-// Types
+// Traits
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct Expression<'t> {
-    operator: Option<Operator>,
-    variable_list: VariableList<'t>,
+#[allow(clippy::module_name_repetitions)]
+pub trait Expand {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError>;
 }
 
-impl<'t> Expression<'t> {
-    const fn new(operator: Option<Operator>, variable_list: VariableList<'t>) -> Self {
-        Self {
-            operator,
-            variable_list,
+// -----------------------------------------------------------------------------
+
+// Errors
+
+/// An [`Error`](std::error::Error) compatible type which may be the result of a
+/// failure of [`Template::expand`] (given a valid [`Template`] and provided
+/// [`Values`]).
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Error)]
+pub enum ExpandError {
+    /// Formatting for this expansion failed due to an internal error in
+    /// [`std::fmt::Write`], which is not recoverable.
+    #[error("formatting failed")]
+    Format(#[from] Error),
+}
+
+// =============================================================================
+// Expand - Implementations
+// =============================================================================
+
+// Template
+
+impl<'t> Expand for Template<'t> {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
+        self.components
+            .iter()
+            .try_for_each(|component| component.expand(values, write))
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Component
+
+impl<'t> Expand for Component<'t> {
+    fn expand(&self, values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
+        match self {
+            Self::Expression(expression) => expression.expand(values, write),
+            Self::Literal(literal) => literal.expand(values, write),
         }
     }
 }
 
 // -----------------------------------------------------------------------------
 
-// Parse
-
-impl<'t> TryParse<'t> for Expression<'t> {
-    fn try_parse(raw: &'t str, global: usize) -> Result<(usize, Self), ParseError> {
-        let mut parsed_operator = None;
-        let mut parsed_variable_list = Vec::new();
-        let mut state = ExpressionState::default();
-
-        loop {
-            let rest = &raw[state.position..];
-
-            match &state.next {
-                ExpressionNext::OpeningBrace if rest.starts_with('{') => {
-                    state.next = ExpressionNext::Operator;
-                    state.position += 1;
-                }
-                ExpressionNext::OpeningBrace => {
-                    return Err(ParseError::UnexpectedInput {
-                        position: global + state.position,
-                        message: "unexpected input when parsing expression component".into(),
-                        expected: "opening brace ('{')".into(),
-                    });
-                }
-                ExpressionNext::Operator => {
-                    let (position, operator) =
-                        Option::<Operator>::parse(rest, global + state.position);
-
-                    parsed_operator = operator;
-                    state.next = ExpressionNext::VariableList;
-                    state.position += position;
-                }
-                ExpressionNext::VariableList => {
-                    match VariableList::try_parse(rest, global + state.position) {
-                        Ok((position, variable_list)) => {
-                            parsed_variable_list.extend(variable_list);
-                            state.next = ExpressionNext::ClosingBrace;
-                            state.position += position;
-                        }
-                        Err(err) => return Err(err),
-                    }
-                }
-                ExpressionNext::ClosingBrace if rest.starts_with('}') => {
-                    state.position += 1;
-
-                    return Ok((
-                        state.position,
-                        Self::new(parsed_operator, parsed_variable_list),
-                    ));
-                }
-                ExpressionNext::ClosingBrace => {
-                    return Err(ParseError::UnexpectedInput {
-                        position: global + state.position,
-                        message: "unexpected input when parsing expression component".into(),
-                        expected: "closing brace ('}')".into(),
-                    });
-                }
-            }
-        }
-    }
-}
-
-#[derive(Default)]
-struct ExpressionState {
-    next: ExpressionNext,
-    position: usize,
-}
-
-#[derive(Default)]
-enum ExpressionNext {
-    #[default]
-    OpeningBrace,
-    Operator,
-    VariableList,
-    ClosingBrace,
-}
-
-// -----------------------------------------------------------------------------
-
-// Expand
+// Expression
 
 impl<'t> Expand for Expression<'t> {
     #[allow(clippy::cognitive_complexity)] // TODO: Reduce?
@@ -139,7 +95,7 @@ impl<'t> Expand for Expression<'t> {
         let behaviour = self
             .operator
             .as_ref()
-            .map_or(&operator::DEFAULT_BEHAVIOUR, Operator::behaviour);
+            .map_or(&DEFAULT_BEHAVIOUR, Operator::behaviour);
 
         let satisfier = behaviour.allow.satisfier();
         let mut first = true;
@@ -398,7 +354,7 @@ impl<'t> Expand for Expression<'t> {
 }
 
 #[derive(Debug)]
-pub struct Behaviour {
+struct Behaviour {
     pub first: Option<char>,
     pub sep: char,
     pub named: bool,
@@ -407,16 +363,114 @@ pub struct Behaviour {
 }
 
 #[derive(Debug)]
-pub enum Allow {
+enum Allow {
     U,
     UR,
 }
 
 impl Allow {
-    pub fn satisfier(&self) -> Box<dyn Satisfy> {
+    fn satisfier(&self) -> Box<dyn Satisfy> {
         match self {
             Self::U => Box::new(satisfy::unreserved()),
             Self::UR => Box::new(satisfy::unreserved_or_reserved()),
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+// Operator
+
+impl Operator {
+    fn behaviour(&self) -> &Behaviour {
+        match self {
+            Self::Level2(op_level_2) => match op_level_2 {
+                OpLevel2::Fragment => &FRAGMENT_BEHAVIOUR,
+                OpLevel2::Reserved => &RESERVED_BEHAVIOUR,
+            },
+            Self::Level3(op_level_3) => match op_level_3 {
+                OpLevel3::Label => &LABEL_BEHAVIOUR,
+                OpLevel3::Path => &PATH_BEHAVIOUR,
+                OpLevel3::PathParameter => &PATH_PARAMETER_BEHAVIOUR,
+                OpLevel3::Query => &QUERY_BEHAVIOUR,
+                OpLevel3::QueryContinuation => &QUERY_CONTINUATION_BEHAVIOUR,
+            },
+        }
+    }
+}
+
+static DEFAULT_BEHAVIOUR: Behaviour = Behaviour {
+    first: None,
+    sep: ',',
+    named: false,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+static FRAGMENT_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('#'),
+    sep: ',',
+    named: false,
+    ifemp: None,
+    allow: Allow::UR,
+};
+
+static RESERVED_BEHAVIOUR: Behaviour = Behaviour {
+    first: None,
+    sep: ',',
+    named: false,
+    ifemp: None,
+    allow: Allow::UR,
+};
+
+static LABEL_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('.'),
+    sep: '.',
+    named: false,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+static PATH_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('/'),
+    sep: '/',
+    named: false,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+static PATH_PARAMETER_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some(';'),
+    sep: ';',
+    named: true,
+    ifemp: None,
+    allow: Allow::U,
+};
+
+static QUERY_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('?'),
+    sep: '&',
+    named: true,
+    ifemp: Some('='),
+    allow: Allow::U,
+};
+
+static QUERY_CONTINUATION_BEHAVIOUR: Behaviour = Behaviour {
+    first: Some('&'),
+    sep: '&',
+    named: true,
+    ifemp: Some('='),
+    allow: Allow::U,
+};
+
+// -----------------------------------------------------------------------------
+
+// Literal
+
+impl<'t> Expand for Literal<'t> {
+    fn expand(&self, _values: &Values, write: &mut impl Write) -> Result<(), ExpandError> {
+        write.encode(self.value, &satisfy::unreserved_or_reserved())?;
+
+        Ok(())
     }
 }

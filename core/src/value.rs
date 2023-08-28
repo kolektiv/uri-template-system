@@ -6,7 +6,7 @@ use fnv::FnvBuildHasher;
 // Value
 // =============================================================================
 
-// Types
+// Values
 
 /// The [`Values`] type is used as the source of content during template
 /// expansion, and is a logical map of keys to typed [`Value`] (which may or may
@@ -48,6 +48,10 @@ impl FromIterator<(String, Value)> for Values {
         }
     }
 }
+
+// -----------------------------------------------------------------------------
+
+// Value
 
 /// The [`Value`] type is used as the source of content during template
 /// expansion, as part of a [`Values`] collection. It maps to the three valid
