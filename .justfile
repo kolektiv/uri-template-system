@@ -17,12 +17,18 @@ test *args:
 
 # Criterion (Benches)
 
-criterion_root := data_home/"criterion"
-criterion_home := criterion_root/project_name
+criterion_home := data_home/"criterion"/project_name
+criterion_cmd := "cargo bench -p uri-template-system-tests"
 
-bench name *args:
+compare *args:
     #!/usr/bin/env bash
-    CRITERION_HOME={{criterion_home/name}} cargo bench -p uri-template-system-tests --features {{test_features}} --bench {{name}} -- --verbose {{args}}
+    CRITERION_HOME={{criterion_home}}/comparison {{criterion_cmd}} --features {{test_features}} --bench comparison -- --verbose {{args}}
+
+
+optimise *args:
+    #!/usr/bin/env bash
+    CRITERION_HOME={{criterion_home}}/optimisation {{criterion_cmd}} --bench optimisation -- --verbose {{args}}
+
 
 # Release
 
