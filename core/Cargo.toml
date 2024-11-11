@@ -13,4 +13,4 @@ version.workspace = true
 
 [dependencies]
 fnv = "1"
-thiserror = "1"
+thiserror = "2"
